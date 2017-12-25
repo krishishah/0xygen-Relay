@@ -1,0 +1,22 @@
+{
+  "name": "0x-relay",
+  "version": "1.0.0",
+  "description": "Decentralised Ethereum Token Exchange built on top of the 0x protocol",
+  "main": "src/index.ts",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krishishah/0x-relay.git"
+  },
+  "author": "Krishi Shah",
+  "license": "SEE LICENSE IN README.md",
+  "bugs": {
+    "url": "https://github.com/krishishah/0x-relay/issues"
+  },
+  "homepage": "https://github.com/krishishah/0x-relay#readme"
+}
