@@ -15,49 +15,56 @@ export class V0RestApiRouter {
    * GET token pairs.
    */
   public getTokenPairs(req: Request, res: Response, next: NextFunction) {
-    res.send(Heroes);
+    res.statusMessage = "Success";
+    res.statusCode = 201;
   }
 
   /**
    * GET orderbook.
    */
   public getOrderBook(req: Request, res: Response, next: NextFunction) {
-    res.send(Heroes);
+    res.statusMessage = "Success";
+    res.statusCode = 201;
   }
 
   /**
    * GET orders.
    */
   public getOrders(req: Request, res: Response, next: NextFunction) {
-    res.send(Heroes);
+    res.statusMessage = "Success";
+    res.statusCode = 201;
   }
 
   /**
    * GET order.
    */
   public getOrder(req: Request, res: Response, next: NextFunction) {
-    res.send(Heroes);
+    res.statusMessage = "Success";
+    res.statusCode = 201;
   }
 
   /**
    * GET fees.
    */
   public getFees(req: Request, res: Response, next: NextFunction) {
-    res.send(Heroes);
+    res.statusMessage = "Success";
+    res.statusCode = 201;
   }
 
   /**
    * POST order.
    */
   public postOrder(req: Request, res: Response, next: NextFunction) {
-    res.send(Heroes);
+    res.statusMessage = "Success";
+    res.statusCode = 201;
   }
 
   /**
    * GET tokens.
    */
   public getTokens(req: Request, res: Response, next: NextFunction) {
-    res.send(Heroes);
+    res.statusMessage = "Success";
+    res.statusCode = 201;
   }
 
   /**
