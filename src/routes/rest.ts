@@ -1,10 +1,10 @@
 import {Router, Request, Response, NextFunction} from 'express';
 
-export class V0RestApiRouter {
+class V0RestApiRouter {
   router: Router
 
   /**
-   * Initialize the HeroRouter
+   * Initialize the RestApiRouter
    */
   constructor() {
     this.router = Router();
@@ -17,6 +17,7 @@ export class V0RestApiRouter {
   public getTokenPairs(req: Request, res: Response, next: NextFunction) {
     res.statusMessage = "Success";
     res.statusCode = 201;
+    res.send();
   }
 
   /**
@@ -25,6 +26,7 @@ export class V0RestApiRouter {
   public getOrderBook(req: Request, res: Response, next: NextFunction) {
     res.statusMessage = "Success";
     res.statusCode = 201;
+    res.send();
   }
 
   /**
@@ -33,6 +35,7 @@ export class V0RestApiRouter {
   public getOrders(req: Request, res: Response, next: NextFunction) {
     res.statusMessage = "Success";
     res.statusCode = 201;
+    res.send();
   }
 
   /**
@@ -41,6 +44,7 @@ export class V0RestApiRouter {
   public getOrder(req: Request, res: Response, next: NextFunction) {
     res.statusMessage = "Success";
     res.statusCode = 201;
+    res.send();
   }
 
   /**
@@ -49,6 +53,7 @@ export class V0RestApiRouter {
   public getFees(req: Request, res: Response, next: NextFunction) {
     res.statusMessage = "Success";
     res.statusCode = 201;
+    res.send();
   }
 
   /**
@@ -57,6 +62,7 @@ export class V0RestApiRouter {
   public postOrder(req: Request, res: Response, next: NextFunction) {
     res.statusMessage = "Success";
     res.statusCode = 201;
+    res.send();
   }
 
   /**
@@ -65,13 +71,14 @@ export class V0RestApiRouter {
   public getTokens(req: Request, res: Response, next: NextFunction) {
     res.statusMessage = "Success";
     res.statusCode = 201;
+    res.send();
   }
 
   /**
    * Take each handler, and attach to one of the Express.Router's
    * endpoints.
    */
-  init() {
+  private init() {
     this.router.get('/token_pairs', this.getTokenPairs);
     this.router.get('/orderbook', this.getOrderBook);
     this.router.get('/orders', this.getOrder);
@@ -83,8 +90,5 @@ export class V0RestApiRouter {
 
 }
 
-// Create the HeroRouter, and export its configured Express.Router
-const v0RestApiRoutes = new V0RestApiRouter();
-v0RestApiRoutes.init();
-
-export default v0RestApiRoutes.router;
+// Create the v0RestApiRoutes, and export its configured Express.Router
+export const v0RestApiRoutes = new V0RestApiRouter().router;

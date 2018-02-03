@@ -1,8 +1,11 @@
 /** App entry point lives here */
 import * as http from 'http';
 import * as debug from 'debug';
+import "reflect-metadata";
+import {createConnection} from "typeorm";
 
-import App from './App';
+import App from './app';
+import { create } from 'domain';
 
 debug('ts-express:server');
 
@@ -13,6 +16,10 @@ const server = http.createServer(App);
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
+
+// Create connection with Database
+// Config read from ormconfig.json file
+// createConnection();
 
 function normalizePort(val: number|string): number|string|boolean {
   let port: number = (typeof val === 'string') ? parseInt(val, 10) : val;

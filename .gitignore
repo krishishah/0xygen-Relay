@@ -68,3 +68,6 @@ dist/*
 
 # Temp Mac files
 .DS_Store
+
+# Visual Studio Code Temp files
+.vscode/

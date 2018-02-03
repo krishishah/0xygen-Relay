@@ -23,12 +23,17 @@
   "homepage": "https://github.com/krishishah/0x-relay#readme",
   "dependencies": {
     "0x": "^2.5.3",
+    "0x.js": "^0.31.1",
+    "@0xproject/json-schemas": "^0.7.7",
     "bignumber": "^1.1.0",
     "body-parser": "^1.18.2",
     "debug": "^3.1.0",
     "ethereumjs-testrpc": "^6.0.3",
     "express": "^4.16.2",
     "morgan": "^1.9.0",
+    "pg": "^7.4.1",
+    "reflect-metadata": "^0.1.12",
+    "typeorm": "^0.1.12",
     "web3": "^1.0.0-beta.27"
   },
   "devDependencies": {
@@ -47,6 +52,7 @@
     "gulp-typescript": "^3.2.3",
     "mocha": "^4.0.1",
     "ts-node": "^4.1.0",
-    "typescript": "^2.0.6"
+    "tslint": "^5.9.1",
+    "typescript": "^2.7.1"
   }
 }
