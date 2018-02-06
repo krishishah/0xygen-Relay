@@ -19,19 +19,17 @@ server.on('listening', onListening);
 
 // Create connection with Database
 // Config read from ormconfig.json file
-// createConnection();
+createConnection();
 
 function normalizePort(val: number|string): number|string|boolean {
   let port: number = (typeof val === 'string') ? parseInt(val, 10) : val;
-  if (isNaN(port)) return val;
-  else if (port >= 0) return port;
-  else return false;
+  if (isNaN(port)) { return val; } else if (port >= 0) { return port; } else { return false; }
 }
 
 function onError(error: NodeJS.ErrnoException): void {
-  if (error.syscall !== 'listen') throw error;
+  if (error.syscall !== 'listen') { throw error; }
   let bind = (typeof port === 'string') ? 'Pipe ' + port : 'Port ' + port;
-  switch(error.code) {
+  switch (error.code) {
     case 'EACCES':
       console.error(`${bind} requires elevated privileges`);
       process.exit(1);
