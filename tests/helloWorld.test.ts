@@ -10,16 +10,9 @@ const expect = chai.expect;
 describe('baseRoute', () => {
 
   it('should be json', () => {
-    return chai.request(app).get('/')
+    return chai.request(app).get('/v0/orders')
     .then(res => {
-      expect(res.type).to.eql('application/json');
-    });
-  });
-
-  it('should have a message prop', () => {
-    return chai.request(app).get('/')
-    .then(res => {
-      expect(res.body.message).to.eql('Hello World!');
+      expect(res.status).to.eql(201);
     });
   });
 

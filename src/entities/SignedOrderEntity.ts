@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
-import { BigNumber } from 'bignumber.js';
 
 @Entity()
 export class SignedOrderEntity {

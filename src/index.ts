@@ -1,8 +1,8 @@
 /** App entry point lives here */
 import * as http from 'http';
 import * as debug from 'debug';
-import "reflect-metadata";
-import {createConnection} from "typeorm";
+import 'reflect-metadata';
+import { createConnection } from 'typeorm';
 
 import App from './app';
 import { create } from 'domain';
