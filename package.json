@@ -8,8 +8,16 @@
   },
   "scripts": {
     "start": "node dist/index.js",
-    "test": "mocha --reporter spec --compilers ts:ts-node/register 'tests/**/*.test.ts' --exit",
-    "build": "gulp scripts"
+    "test": "./node_modules/.bin/mocha --reporter spec --compilers ts:ts-node/register 'tests/**/*.test.ts' --exit",
+    "build": "gulp scripts",
+    "lint": "tslint src/**/*.ts",
+    "download_snapshot": "download --extract --strip 1 --out 0x_testrpc_snapshot ${npm_package_config_snapshot_url}",
+    "testrpc": "ganache-cli -p 8545 --networkId 50 --db ./0x_testrpc_snapshot -m \"${npm_package_config_mnemonic}\"",
+    "clean-dist": "rimraf dist"
+  },
+  "config": {
+    "mnemonic": "concert load couple harbor equip island argue ramp clarify fence smart topic",
+    "snapshot_url": "https://s3.amazonaws.com/testrpc-shapshots/35053f9.zip"
   },
   "repository": {
     "type": "git",
@@ -27,14 +35,15 @@
     "bignumber": "^1.1.0",
     "body-parser": "^1.18.2",
     "debug": "^3.1.0",
-    "ethereumjs-testrpc": "^6.0.3",
     "express": "^4.16.2",
     "morgan": "^1.9.0",
     "pg": "^7.4.1",
     "reflect-metadata": "^0.1.12",
     "typedi": "0.5.2",
     "typeorm": "^0.1.12",
-    "typeorm-typedi-extensions": "^0.1.1"
+    "typeorm-typedi-extensions": "^0.1.1",
+    "web3": "^0.20.4",
+    "web3-provider-engine": "^13.6.0"
   },
   "devDependencies": {
     "@types/body-parser": "^1.16.8",

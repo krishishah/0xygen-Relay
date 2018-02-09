@@ -4,7 +4,7 @@ import * as debug from 'debug';
 import 'reflect-metadata';
 import { createConnection } from 'typeorm';
 
-import App from './app';
+import { appExpress as App } from './app';
 import { create } from 'domain';
 
 debug('ts-express:server');

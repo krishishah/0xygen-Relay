@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/node:latest
+      - image: circleci/node:9.3
         environment:
           - PORT: 3000
           - PGUSER: 'test'
@@ -27,8 +27,20 @@ jobs:
             npm --version
 
       - run:
+          name: Change permissions from root to user
+          command: sudo chown -R $(whoami) $(npm config get prefix)/{lib/node_modules,bin,share}
+
+      - run:
+          name: Clean npm Cache
+          command: npm cache clean --force
+
+      - run:
           name: Install dependencies
           command: npm install
+
+      - run:
+          name: Install Dev Dependencies
+          command: npm install --only=dev
 
       - run:
           name: Sync Database with ORM
@@ -36,4 +48,4 @@ jobs:
           
       - run:
           name: Run tests
-          command: npm test --exit
+          command: npm run-script test --exit

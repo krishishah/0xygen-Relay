@@ -1,7 +1,7 @@
-import {Router, Request, Response, NextFunction} from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 
 class V0RestApiRouter {
-  router: Router
+  router: Router;
 
   /**
    * Initialize the RestApiRouter
@@ -15,7 +15,7 @@ class V0RestApiRouter {
    * GET token pairs.
    */
   public getTokenPairs(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = "Success";
+    res.statusMessage = 'Success';
     res.statusCode = 201;
     res.send();
   }
@@ -24,7 +24,7 @@ class V0RestApiRouter {
    * GET orderbook.
    */
   public getOrderBook(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = "Success";
+    res.statusMessage = 'Success';
     res.statusCode = 201;
     res.send();
   }
@@ -33,7 +33,7 @@ class V0RestApiRouter {
    * GET orders.
    */
   public getOrders(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = "Success";
+    res.statusMessage = 'Success';
     res.statusCode = 201;
     res.send();
   }
@@ -42,7 +42,7 @@ class V0RestApiRouter {
    * GET order.
    */
   public getOrder(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = "Success";
+    res.statusMessage = 'Success';
     res.statusCode = 201;
     res.send();
   }
@@ -51,7 +51,7 @@ class V0RestApiRouter {
    * GET fees.
    */
   public getFees(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = "Success";
+    res.statusMessage = 'Success';
     res.statusCode = 201;
     res.send();
   }
@@ -60,7 +60,7 @@ class V0RestApiRouter {
    * POST order.
    */
   public postOrder(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = "Success";
+    res.statusMessage = 'Success';
     res.statusCode = 201;
     res.send();
   }
@@ -69,7 +69,7 @@ class V0RestApiRouter {
    * GET tokens.
    */
   public getTokens(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = "Success";
+    res.statusMessage = 'Success';
     res.statusCode = 201;
     res.send();
   }

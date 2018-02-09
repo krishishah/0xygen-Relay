@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 COPY package.json /usr/src/app/
 COPY ./tsconfig.json /usr/src/app
 COPY ./gulpfile.js /usr/src/app
-RUN npm install
+RUN sudo npm install -g
 COPY . /usr/src/app
 EXPOSE 3000
 CMD [ "npm", "run", "build" ]
