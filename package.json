@@ -12,12 +12,12 @@
     "build": "gulp scripts",
     "lint": "tslint src/**/*.ts",
     "download_snapshot": "download --extract --strip 1 --out 0x_testrpc_snapshot ${npm_package_config_snapshot_url}",
-    "testrpc": "ganache-cli -p 8545 --networkId 50 --db ./0x_testrpc_snapshot -m \"${npm_package_config_mnemonic}\"",
+    "testrpc": "ganache-cli -p 8545 --networkId 50 -b 3 --db ./0x_testrpc_snapshot -m \"${npm_package_config_mnemonic}\"",
     "clean-dist": "rimraf dist"
   },
   "config": {
     "mnemonic": "concert load couple harbor equip island argue ramp clarify fence smart topic",
-    "snapshot_url": "https://s3.amazonaws.com/testrpc-shapshots/35053f9.zip"
+    "snapshot_url": "https://s3.amazonaws.com/testrpc-shapshots/07d00cc515e0f9825b81595386b358593b7a3d6f.zip"
   },
   "repository": {
     "type": "git",
@@ -32,10 +32,12 @@
   "dependencies": {
     "0x.js": "^0.32.0",
     "@0xproject/json-schemas": "^0.7.7",
+    "ajv": "^6.1.1",
     "bignumber": "^1.1.0",
     "body-parser": "^1.18.2",
     "debug": "^3.1.0",
     "express": "^4.16.2",
+    "ganache-cli": "^6.0.3",
     "morgan": "^1.9.0",
     "pg": "^7.4.1",
     "reflect-metadata": "^0.1.12",

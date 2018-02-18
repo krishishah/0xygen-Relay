@@ -45,7 +45,7 @@ jobs:
       - run:
           name: Sync Database with ORM
           command: ./node_modules/.bin/typeorm schema:sync 
-          
+
       - run:
-          name: Run tests
-          command: npm run-script test --exit
+          name: Build server
+          command: npm run build
