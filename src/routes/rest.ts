@@ -4,7 +4,7 @@ import { Service, Container } from 'typedi';
 import { RestService } from '../services/restService';
 import { SignedOrder } from '0x.js';
 import { SerializerUtils } from '../utils/serialization';
-import { SignedOrderSchema } from '../schemas/signedOrderSchema';
+import { SignedOrderSchema } from '../types/schemas';
 
 @Service()
 export class V0RestApiRouter {
@@ -31,9 +31,20 @@ export class V0RestApiRouter {
    * GET orderbook.
    */
   public getOrderBook(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = 'Success';
-    res.statusCode = 201;
-    res.send();
+    const baseTokenAddress: string = req.query.baseTokenAddress;
+    const quoteTokenAddress: string = req.query.quoteTokenAddress;
+    this.restService.getOrderBook(baseTokenAddress, quoteTokenAddress)
+    .then(orderBook => {
+      res.setHeader('Content-Type', 'application/json');
+      res.json(SerializerUtils.TokenPairOrderbooktoJSON(orderBook));
+      res.send();
+    })
+    .catch(error => {
+      // TODO: Sort out error handling
+      res.statusMessage = error.statusMessage;
+      res.statusCode = 404;
+      res.send();
+    });
   }
 
   /**
@@ -86,15 +97,6 @@ export class V0RestApiRouter {
   }
 
   /**
-   * GET tokens.
-   */
-  public getTokens(req: Request, res: Response, next: NextFunction) {
-    res.statusMessage = 'Success';
-    res.statusCode = 201;
-    res.send();
-  }
-
-  /**
    * Take each handler, and attach to one of the Express.Router's
    * endpoints.
    */
@@ -105,7 +107,6 @@ export class V0RestApiRouter {
     this.router.get('/order/:orderHash', this.getOrder.bind(this));
     this.router.get('/fees', this.getFees.bind(this));
     this.router.post('/order', this.postOrder.bind(this));
-    this.router.get('/tokens', this.getTokens.bind(this));
   }
 
 }
