@@ -3,6 +3,7 @@ version: 2
 jobs:
   build:
     docker:
+
       - image: circleci/node:9.3
         environment:
           - PORT: 3000
@@ -18,8 +19,11 @@ jobs:
           - POSTGRES_DB: test
           - POSTGRES_PASSWORD: test
 
+      - image: davidqhr/0x-testrpc:latest
+
     steps:
       - checkout
+
       - run:
           name: "Checking Versions"
           command: |
@@ -31,21 +35,17 @@ jobs:
           command: sudo chown -R $(whoami) $(npm config get prefix)/{lib/node_modules,bin,share}
 
       - run:
-          name: Clean npm Cache
-          command: npm cache clean --force
+          name: Install Lerna
+          command: npm install --global lerna
 
       - run:
-          name: Install dependencies
-          command: npm install
+          name: Install Package Dependencies 
+          command: lerna bootstrap --stream
 
       - run:
-          name: Install Dev Dependencies
-          command: npm install --only=dev
+          name: Build Packages
+          command: lerna run build --stream
 
       - run:
-          name: Sync Database with ORM
-          command: ./node_modules/.bin/typeorm schema:sync 
-
-      - run:
-          name: Build server
-          command: npm run build
+          name: Test Packages
+          command: lerna run test

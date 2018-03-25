@@ -10,10 +10,8 @@ services:
      - .:/src
     links:
       - db
-      - redis
     depends_on:
       - db
-      - redis
     environment:
       PORT: '3000'
       PGUSER: 'test'

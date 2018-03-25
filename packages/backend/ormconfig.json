@@ -8,12 +8,15 @@
    "synchronize": true,
    "logging": true,
    "entities": [
+      "src/entities/**/*.ts",
       "dist/entities/**/*.js"
    ],
    "migrations": [
+      "src/migration/**/*.ts",
       "dist/migration/**/*.js"
    ],
    "subscribers": [
+      "src/subscriber/**/*.ts",
       "dist/subscriber/**/*.js"
    ],
    "cli": {

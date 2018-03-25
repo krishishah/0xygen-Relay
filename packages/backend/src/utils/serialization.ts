@@ -4,7 +4,6 @@ import { ECSignature } from '0x.js';
 import { SignedOrderSchema, TokenPairOrderbookSchema } from '../types/schemas';
 import { TokenPairOrderbook } from '../types/tokenPairOrderBook';
 
-
 export class SerializerUtils {
 
     public static SignedOrdertoJSON(signedOrder: SignedOrder): SignedOrderSchema {

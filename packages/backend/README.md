@@ -1,6 +1,6 @@
-# 0x-relay 
+# 0xygen
 
-## Decentralised Ethereum Token Relay
+## Decentralised Ethereum Token Relayer
 
 ### Development Environment Setup
 
