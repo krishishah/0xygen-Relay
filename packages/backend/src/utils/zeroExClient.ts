@@ -1,5 +1,6 @@
 import { ZeroEx, ZeroExConfig } from '0x.js';
 import { Web3ProviderEngine } from 'web3-provider-engine';
+import { isNullOrUndefined } from 'util';
 
 export class ZeroExClient {
 
@@ -10,7 +11,9 @@ export class ZeroExClient {
     }
 
     public static createInstance(web3providerEngine: Web3ProviderEngine, zeroExConfig: ZeroExConfig): ZeroEx {
-        this.zeroEx = new ZeroEx(web3providerEngine, zeroExConfig);
+        if (isNullOrUndefined(this.zeroEx)) {
+            this.zeroEx = new ZeroEx(web3providerEngine, zeroExConfig);
+        }
         return this.zeroEx;
     }
 

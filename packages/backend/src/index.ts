@@ -8,6 +8,7 @@ import { App } from './app';
 import { create } from 'domain';
 import { Application } from 'express';
 import * as express from 'express';
+import { ServerClient } from './utils/serverClient';
 
 async function createServer(): Promise<Express.Application> {
   debug('ts-express:server');
@@ -19,10 +20,10 @@ async function createServer(): Promise<Express.Application> {
     const port = normalizePort(process.env.PORT || 3000);
     let app = Container.get(App).express;
     app.set('port', port);
-    const server = http.createServer(app);
-    server.listen(port);
-    server.on('error', onError);
-    server.on('listening', onListening);
+    const httpServer = http.createServer(app);
+    httpServer.listen(port);
+    httpServer.on('error', onError);
+    httpServer.on('listening', onListening);
   
     function normalizePort(val: number|string): number|string|boolean {
       let port: number = (typeof val === 'string') ? parseInt(val, 10) : val;
@@ -47,12 +48,14 @@ async function createServer(): Promise<Express.Application> {
     }
     
     function onListening(): void {
-      let addr = server.address();
+      let addr = httpServer.address();
       let bind = (typeof addr === 'string') ? `pipe ${addr}` : `port ${addr.port}`;
       debug(`Listening on ${bind}`);
     }
 
-    return server;
+    const serverClient: ServerClient = ServerClient.createInstance(httpServer, connection);
+
+    return serverClient;
   }).catch(error => {
     console.log('Error: ', error);
     return null;
@@ -60,4 +63,4 @@ async function createServer(): Promise<Express.Application> {
 
 }
 
-export const server = createServer();
+export const client = createServer();

@@ -6,7 +6,7 @@ import * as chai from 'chai';
 import chaiHttp = require('chai-http');
 import { SignedOrderEntity } from '../src/entities/signedOrderEntity';
 import { SerializerUtils } from '../src/utils/serialization';
-import { SignedOrderSchema } from '../src/schemas/signedOrderSchema';
+import { SignedOrderSchema } from '../src/types/schemas';
 
 // Configer Web3 engine.
 const engine = new ProviderEngine();

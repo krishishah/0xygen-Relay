@@ -4,10 +4,10 @@ import chaiHttp = require('chai-http');
 import expressApp from '../src/index';
 import { create } from 'domain';
 import { error } from 'util';
-import { server } from '../src/index';
+import { client } from '../src/index';
 
 before(async () => {
-  return await server;
+  return await client;
 });
 
 chai.use(chaiHttp);
