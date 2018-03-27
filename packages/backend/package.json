@@ -37,6 +37,7 @@
     "body-parser": "^1.18.2",
     "debug": "^3.1.0",
     "dotenv": "^5.0.1",
+    "event-pubsub": "^4.3.0",
     "express": "^4.16.2",
     "ganache-cli": "^6.0.3",
     "morgan": "^1.9.0",
