@@ -1,5 +1,8 @@
 {
 	"devDependencies": {
 		"lerna": "^2.9.0"
+	},
+	"dependencies": {
+		"event-pubsub": "^4.3.0"
 	}
 }

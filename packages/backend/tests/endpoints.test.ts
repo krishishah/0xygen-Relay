@@ -1,3 +1,4 @@
+require('dotenv').config({ path: './test.env' });
 import * as mocha from 'mocha';
 import * as chai from 'chai';
 import chaiHttp = require('chai-http');

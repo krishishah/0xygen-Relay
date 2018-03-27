@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node -r dotenv/config dist/index.js dotenv_config_path=dev.env",
-    "test": "./node_modules/.bin/mocha -r dotenv/config -r ts-node/register 'tests/**/*.test.ts' dotenv_config_path=test.env --exit",
+    "test": "./node_modules/.bin/mocha -r ts-node/register 'tests/**/*.test.ts' --exit",
     "build": "gulp scripts",
     "lint": "tslint src/**/*.ts",
     "download_snapshot": "download --extract --strip 1 --out 0x_testrpc_snapshot ${npm_package_config_snapshot_url}",
@@ -46,7 +46,8 @@
     "typeorm": "^0.1.12",
     "typeorm-typedi-extensions": "^0.1.1",
     "web3": "^0.20.4",
-    "web3-provider-engine": "^13.6.0"
+    "web3-provider-engine": "^13.6.0",
+    "websocket": "^1.0.25"
   },
   "devDependencies": {
     "@types/body-parser": "^1.16.8",
