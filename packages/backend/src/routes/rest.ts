@@ -5,10 +5,11 @@ import { RestService } from '../services/restService';
 import { SignedOrder } from '0x.js';
 import { SerializerUtils } from '../utils/serialization';
 import { SignedOrderSchema } from '../types/schemas';
+import { ZeroEx } from '0x.js/lib/src/0x';
 
 @Service()
 export class V0RestApiRouter {
-    
+
     router: Router;
 
     /**
@@ -24,8 +25,8 @@ export class V0RestApiRouter {
      */
     public getTokenPairs(req: Request, res: Response, next: NextFunction) {
         res.statusMessage = 'Success';
-        res.statusCode = 201;
-        res.send();
+        res.status(201).send({});
+
     }
 
     /**
@@ -35,17 +36,17 @@ export class V0RestApiRouter {
         const baseTokenAddress: string = req.query.baseTokenAddress;
         const quoteTokenAddress: string = req.query.quoteTokenAddress;
         this.restService.getOrderBook(baseTokenAddress, quoteTokenAddress)
-        .then(orderBook => {
-        res.setHeader('Content-Type', 'application/json');
-        res.json(SerializerUtils.TokenPairOrderbooktoJSON(orderBook));
-        res.send();
-        })
-        .catch(error => {
-        // TODO: Sort out error handling
-        res.statusMessage = error.statusMessage;
-        res.statusCode = 404;
-        res.send();
-        });
+            .then(orderBook => {
+                res.setHeader('Content-Type', 'application/json');
+                res.json(SerializerUtils.TokenPairOrderbooktoJSON(orderBook));
+                res.send();
+            })
+            .catch(error => {
+                // TODO: Sort out error handling
+                res.status(404).send({
+                    error: error.statusMessage
+                });
+            });
     }
 
     /**
@@ -53,8 +54,7 @@ export class V0RestApiRouter {
      */
     public getOrders(req: Request, res: Response, next: NextFunction) {
         res.statusMessage = 'Success';
-        res.statusCode = 201;
-        res.send();
+        res.status(201).send({});
     }
 
     /**
@@ -62,26 +62,33 @@ export class V0RestApiRouter {
      */
     public getOrder(req: Request, res: Response, next: NextFunction) {
         const orderHashHex: string = req.params.orderHash;
-        this.restService.getOrder(orderHashHex)
-        .then(order => {
-        res.setHeader('Content-Type', 'application/json');
-        res.json(SerializerUtils.SignedOrdertoJSON(order));
-        res.send();
-        })
-        .catch(error => {
-        res.statusMessage = error.statusMessage;
-        res.statusCode = 404;
-        res.send();
-        });
+        this.restService
+            .getOrder(orderHashHex)
+            .then(
+            order => {
+                res.setHeader('Content-Type', 'application/json');
+                res.json(SerializerUtils.SignedOrdertoJSON(order));
+                res.status(201).send();
+            })
+            .catch(
+            error => {
+                res.status(404).send({
+                    error: error.statusMessage
+                });
+            });
     }
 
     /**
-     * GET fees.
+     * POST fees.
      */
-    public getFees(req: Request, res: Response, next: NextFunction) {
-        res.statusMessage = 'Success';
-        res.statusCode = 201;
-        res.send();
+    public postFees(req: Request, res: Response, next: NextFunction) {
+        const makerFee = new BigNumber(0).toString();
+        const takerFee = ZeroEx.toBaseUnitAmount(new BigNumber(10), 18).toString();
+        res.status(201).send({
+            feeRecipient: ZeroEx.NULL_ADDRESS,
+            makerFee,
+            takerFee,
+        });
     }
 
     /**
@@ -93,8 +100,7 @@ export class V0RestApiRouter {
         const signedOrder = SerializerUtils.SignedOrderfromJSON(signedOrderSchema);
         this.restService.postOrder(signedOrder);
         res.statusMessage = 'Success';
-        res.statusCode = 201;
-        res.send();
+        res.status(201).send({});
     }
 
     /**
@@ -106,8 +112,8 @@ export class V0RestApiRouter {
         this.router.get('/orderbook', this.getOrderBook.bind(this));
         this.router.get('/orders', this.getOrders.bind(this));
         this.router.get('/order/:orderHash', this.getOrder.bind(this));
-        this.router.get('/fees', this.getFees.bind(this));
+        this.router.post('/fees', this.postFees.bind(this));
         this.router.post('/order', this.postOrder.bind(this));
     }
-
+    
 }

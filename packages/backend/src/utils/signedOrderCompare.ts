@@ -3,9 +3,6 @@ import { SignedOrder } from '0x.js/lib/src/types';
 export function signedOrderCompare(x: SignedOrder, y: SignedOrder): number {
     const xPrice = x.takerTokenAmount.dividedBy(x.makerTokenAmount);
     const yPrice = y.takerTokenAmount.dividedBy(y.makerTokenAmount);
-
-    const xx = x.takerTokenAmount.dividedBy(x.makerTokenAmount).toNumber();
-    const yy = y.takerTokenAmount.dividedBy(y.makerTokenAmount).toNumber();
     
     // Sort by descending order of rate
     if (!xPrice.equals(yPrice)) {
