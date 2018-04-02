@@ -1,0 +1,35 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "0x.js": "^0.32.3",
+    "@0xproject/connect": "^0.5.8",
+    "@0xproject/subproviders": "0.8.3",
+    "@0xproject/types": "^0.5.0",
+    "@0xproject/typescript-typings": "0.0.3",
+    "@0xproject/utils": "0.3.0",
+    "@0xproject/web3-wrapper": "0.1.10",
+    "lodash": "4.17.5",
+    "react": "^16.3.0",
+    "react-dom": "^16.3.0",
+    "react-scripts-ts": "2.14.0",
+    "types-bn": "0.0.1",
+    "web3": "^0.20.4",
+    "web3-provider-engine": "^13.8.0"
+  },
+  "scripts": {
+    "start": "react-scripts-ts start",
+    "build": "react-scripts-ts build",
+    "test": "react-scripts-ts test --env=jsdom",
+    "eject": "react-scripts-ts eject"
+  },
+  "devDependencies": {
+    "@types/jest": "^22.2.2",
+    "@types/lodash": "4.14.102",
+    "@types/node": "^9.6.1",
+    "@types/react": "^16.3.0",
+    "@types/react-dom": "^16.0.4",
+    "typescript": "^2.8.1"
+  }
+}

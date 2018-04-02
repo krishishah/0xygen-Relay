@@ -7,12 +7,12 @@
     "test": "tests"
   },
   "scripts": {
-    "start": "node -r dotenv/config dist/index.js dotenv_config_path=dev.env",
+    "start": "node -r dotenv/config dist/index.js dotenv_config_path=.env.dev",
     "test": "./node_modules/.bin/mocha -r ts-node/register 'tests/**/*.test.ts' --exit",
     "build": "gulp scripts",
     "lint": "tslint src/**/*.ts",
     "download_snapshot": "download --extract --strip 1 --out 0x_testrpc_snapshot ${npm_package_config_snapshot_url}",
-    "testrpc": "ganache-cli -p 8545 --networkId 50 -b 3 --db ./0x_testrpc_snapshot -m \"${npm_package_config_mnemonic}\"",
+    "testrpc": "ganache-cli -p 8545 --networkId 50 --db ./0x_testrpc_snapshot -m \"${npm_package_config_mnemonic}\"",
     "clean-dist": "rimraf dist"
   },
   "config": {

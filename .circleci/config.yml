@@ -44,7 +44,7 @@ jobs:
 
       - run:
           name: Build Packages
-          command: lerna run build --stream
+          command: CI=false lerna run build --stream
 
       - run:
           name: Test Packages
