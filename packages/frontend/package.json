@@ -13,7 +13,10 @@
     "lodash": "4.17.5",
     "react": "^16.3.0",
     "react-dom": "^16.3.0",
+    "react-redux": "^5.0.7",
     "react-scripts-ts": "2.14.0",
+    "redux": "^3.7.2",
+    "redux-thunk": "^2.2.0",
     "types-bn": "0.0.1",
     "web3": "^0.20.4",
     "web3-provider-engine": "^13.8.0"
