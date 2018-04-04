@@ -19,14 +19,13 @@ const ETHER_TOKEN_NAME = 'ETH';
 
 export default class Account extends React.Component<Props, {}> {
     state = { accounts: [''], balances: {} };
-    public _pollingIntervalId: any;
     private _web3Wrapper: Web3Wrapper;
     constructor(props: Props) {
         super(props);
         this._web3Wrapper = new Web3Wrapper(this.props.web3.currentProvider);
 
         // Poll for the account details and keep it refreshed
-        this._pollingIntervalId = setInterval(() => {
+        setInterval(() => {
             this.fetchAccountDetailsAsync();
         // tslint:disable-next-line:align
         }, 3000);
