@@ -4,6 +4,7 @@ import { ZeroEx, Token } from '0x.js';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import * as Web3 from 'web3';
 import { BigNumber } from '@0xproject/utils';
+import { Button, Container } from 'semantic-ui-react';
 
 interface Props {
     web3: Web3;
@@ -95,22 +96,22 @@ export default class Account extends React.Component<Props, {}> {
                 return <p key={k}>{pairString}</p>;
             });
             return (
-                <div>
+                <Container textAlign="center">
                     <p>
                         <strong>Account</strong> {accountString}
                     </p>
                     <strong> Balances </strong>
                     {balancesString}
-                </div>
+                </Container>
             );
         } else {
             return (
-                <div>
+                <Container textAlign="center">
                     <p> Detecting Metamask... Please ensure Metamask is unlocked </p>
-                    <button id="fetchAccountBalances" onClick={this.fetchAccountDetailsAsync}>
+                    <Button id="fetchAccountBalances" onClick={this.fetchAccountDetailsAsync}>
                         Fetch Balances
-                    </button>
-                </div>
+                    </Button>
+                </Container>
             );
         }
     }

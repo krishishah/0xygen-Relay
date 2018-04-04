@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ZeroEx, SignedOrder } from '0x.js';
 import { relayerResponseJsonParsers } from '@0xproject/connect/lib/src/utils/relayer_response_json_parsers';
+import { Button, Divider, Container } from 'semantic-ui-react';
 
 interface Props {
     zeroEx: ZeroEx;
@@ -42,19 +43,19 @@ export default class Faucet extends React.Component<Props, {}> {
     // tslint:disable-next-line:member-ordering
     render() {
         return (
-            <div>
+            <Container textAlign="center">
                 <h2> Testnet Faucets </h2>
                 <p>
                     {' '}
                     Faucets will dispense ETH and ZRX tokens to your account on the test network. This will allow you to
                     begin exchanging ERC20 tokens.
                 </p>
-                <button id="dispenseETH" onClick={this.dispenseETH.bind(this)}>
+                <Button id="dispenseETH" onClick={this.dispenseETH.bind(this)}>
                     Dispense ETH
-                </button>
-                <button id="dispenseZRX" onClick={this.dispenseZRX.bind(this)}>
+                </Button>
+                <Button id="dispenseZRX" onClick={this.dispenseZRX.bind(this)}>
                     Dispense ZRX
-                </button>
+                </Button>
                 <p>
                     0x.js is for exchange, to perform an exchange of ZRX for WETH click the button below.
                     <br />This will generate an order from our Faucet (who will be the maker) and you will submit the
@@ -64,10 +65,10 @@ export default class Faucet extends React.Component<Props, {}> {
                     the 0x exchange contract for each ERC20 Token. Allowance settings can be found on the{' '}
                     <a href="https://0xproject.com/portal/balances">Portal</a>.
                 </p>
-                <button id="orderWETH" onClick={this.orderWETH.bind(this)}>
+                <Button id="orderWETH" onClick={this.orderWETH.bind(this)}>
                     Exchange ZRX/WETH
-                </button>
-            </div>
+                </Button>
+            </Container>
         );
     }
 }

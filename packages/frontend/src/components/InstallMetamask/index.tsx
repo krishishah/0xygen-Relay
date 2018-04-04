@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Container } from 'semantic-ui-react';
 
 interface Props { }
 
@@ -10,7 +11,7 @@ export default class InstallMetamask extends React.Component<Props, {}> {
   render() {
     if (!this.state.metamaskDetected) {
       return (
-        <div>
+        <Container textAlign="center">
           <h1> Please install Metamask </h1>
           <a
             href="https://metamask.io/"
@@ -24,7 +25,7 @@ export default class InstallMetamask extends React.Component<Props, {}> {
             />
           </a>
           <p> Once metamask is installed, please refresh this page </p>
-        </div>
+        </Container>
       );
     }
     if (!this.state.metamaskUnlocked) {
