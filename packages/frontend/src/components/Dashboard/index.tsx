@@ -12,18 +12,11 @@ export class Dashboard extends React.Component {
     return (
       <div style={{ padding: '1em' }}>
         <Menu borderless={true} size="large" fixed="top" color="blue">
-          <Menu.Item primary={true} icon="lab" name="OXYGEN DEX"/>
+          <Menu.Item primary="true" icon="lab" name="OXYGEN DEX"/>
           
           <Menu.Menu position="right">
             <Menu.Item name="Simple" active={activeItem === 'home'} onClick={this.handleItemClick} />
             <Menu.Item name="Expert" active={activeItem === 'messages'} onClick={this.handleItemClick} />
-            <Dropdown item text="Metamask Account">
-              <Dropdown.Menu>
-                <Dropdown.Item>English</Dropdown.Item>
-                <Dropdown.Item>Russian</Dropdown.Item>
-                <Dropdown.Item>Spanish</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
           </Menu.Menu>
         </Menu>
       </div>
