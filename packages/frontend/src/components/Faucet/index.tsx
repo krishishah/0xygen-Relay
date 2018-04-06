@@ -7,7 +7,7 @@ interface Props {
     zeroEx: ZeroEx;
 }
 
-export default class Faucet extends React.Component<Props, {}> {
+export default class Faucet extends React.Component<Props> {
     constructor(props: Props) {
         super(props);
     }

@@ -5,7 +5,8 @@ import { BigNumber } from 'bignumber.js';
 interface State {}
 
 interface Props {
-    token: string;
+    tokenSymbol: string;
+    tokenName: string;
     value: string;
 }
 
@@ -21,7 +22,10 @@ export class BalanceTableRow extends React.Component<Props, State> {
                 <Table.Cell>
                     <Header as="h4">
                         <Header.Content>
-                            {this.props.token}
+                            {this.props.tokenSymbol}
+                            <Header.Subheader>
+                                {this.props.tokenName}
+                            </Header.Subheader>
                         </Header.Content>
                     </Header>
                 </Table.Cell>

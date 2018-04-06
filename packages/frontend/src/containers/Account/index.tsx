@@ -13,7 +13,8 @@ interface Props {
     web3: Web3;
     zeroEx: ZeroEx;
     accounts: string[];
-    balances: Dictionary<Dictionary<BigNumber>>;
+    tokenBalances: Dictionary<TokenBalance>;
+    etherBalance: BigNumber;
     fetchAccountDetailsAsync: () => void;
 }
 
@@ -26,28 +27,35 @@ export default class Account extends React.Component<Props, {}> {
     }
 
     render() {
-        const account = this.props.accounts[0];
-        const balances = this.props.balances[account];
         
-        if (balances) {
-            const accountString = `${account}`;
-            const tokenBalances = _.map(balances, (v: BigNumber, k: string) => {
-                const pairString = `${k}: ${v}`;
+        const account = this.props.accounts[0];
+        const balances = this.props.tokenBalances;
+        const etherBalance = this.props.etherBalance.toString();
+
+        if (Object.keys(balances).length > 0) {
+            
+            const tokenBalances = _.map(balances, (v: TokenBalance, k: string) => {
+                const pairString = `${k}: ${v.balance}`;
                 return (
-                    <BalanceTableRow key={pairString} token={k} value={v.toString()}/>
+                    <BalanceTableRow 
+                        key={pairString} 
+                        tokenName={v.token.name}
+                        tokenSymbol={v.token.symbol} 
+                        value={v.balance.toString()}/>
                 );
             });
 
             return (
                 <div>
                     <h2>Wallet</h2>
-                    <h4>Account Address: {accountString}</h4>
+                    <h4>Account Address: {account.toString()}</h4>
+                    <h4>Balance: {etherBalance} ETH</h4>
                     <Container style={{display: 'flex', justifyContent: 'center', padding: '2em'}}>
                         <Table basic="very" celled collapsing>
                             <Table.Header>
                                 <Table.Row>
                                     <Table.HeaderCell>Token</Table.HeaderCell>
-                                    <Table.HeaderCell>Value</Table.HeaderCell>
+                                    <Table.HeaderCell>Balance</Table.HeaderCell>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -57,6 +65,7 @@ export default class Account extends React.Component<Props, {}> {
                     </Container>
                 </div>
             );
+
         } else {
             return (
                 <Container textAlign="center">
