@@ -10,8 +10,6 @@ import { TokenBalance } from '../../containers/App';
 import { Dictionary } from 'lodash';
 
 interface Props {
-    web3: Web3;
-    zeroEx: ZeroEx;
     accounts: string[];
     tokenBalances: Dictionary<TokenBalance>;
     etherBalance: BigNumber;

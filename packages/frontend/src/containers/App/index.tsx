@@ -16,6 +16,7 @@ import * as _ from 'lodash';
 import { BigNumber } from 'bignumber.js';
 import { Dictionary } from 'lodash';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
+import SetAllowances from '../Steps/SetAllowances';
 
 const Web3ProviderEngine = require('web3-provider-engine');
 
@@ -60,8 +61,17 @@ export default class App extends React.Component<Props, State> {
         };
     }
 
-    componentDidMount() {
+    componentWillMount() {
         this.initialiseState();
+    }
+
+    componentDidMount() {
+        this.fetchAccountDetailsAsync();
+        // Poll for the account details and keep it refreshed
+        setInterval(() => {
+            this.fetchAccountDetailsAsync();
+        // tslint:disable-next-line:align
+        }, 3000);
     }
 
     initialiseState = () => {
@@ -74,12 +84,6 @@ export default class App extends React.Component<Props, State> {
             this.web3Wrapper = new Web3Wrapper(this.providerEngine);
             this.zeroEx = new ZeroEx(this.providerEngine, { networkId: KOVAN_NETWORK_ID });
             this.web3 = new Web3(this.providerEngine);
-
-            // Poll for the account details and keep it refreshed
-            setInterval(() => {
-                this.fetchAccountDetailsAsync();
-            // tslint:disable-next-line:align
-            }, 3000);
         }
     }
 
@@ -133,7 +137,7 @@ export default class App extends React.Component<Props, State> {
                 ethBalance,
                 ETHER_DECIMAL_PLACES
             );
-            
+
             this.setState({etherBalance: ethBalance});
         } catch (e) {
             console.log(e);
@@ -161,7 +165,8 @@ export default class App extends React.Component<Props, State> {
                     <Grid textAlign="center" columns="2">
                         <GridColumn>
                             <Card.Content>
-                                <Faucet zeroEx={this.zeroEx} />
+                                {/* <Faucet zeroEx={this.zeroEx} /> */}
+                                <SetAllowances zeroEx={this.zeroEx} accounts={this.state.accounts} />
                             </Card.Content>
                             <Card.Content>
                                 <Web3Actions web3={this.web3} />
@@ -170,8 +175,6 @@ export default class App extends React.Component<Props, State> {
                         <GridColumn>
                             <Card.Content>
                                 <Account 
-                                    web3={this.web3} 
-                                    zeroEx={this.zeroEx} 
                                     accounts={this.state.accounts}
                                     tokenBalances={this.state.tokenBalances}
                                     etherBalance={this.state.etherBalance}
