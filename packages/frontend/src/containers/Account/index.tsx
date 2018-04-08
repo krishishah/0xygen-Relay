@@ -45,9 +45,9 @@ export default class Account extends React.Component<Props, {}> {
 
             return (
                 <div>
-                    <h2>Wallet</h2>
-                    <h4>Account Address: {account.toString()}</h4>
-                    <h4>Balance: {etherBalance} ETH</h4>
+                    <h2 style={{textAlign: "center"}}>Wallet</h2>
+                    <h5>Account Address: {account.toString()}</h5>
+                    <h5>Balance: {etherBalance} ETH</h5>
                     <Container style={{display: 'flex', justifyContent: 'center', padding: '2em'}}>
                         <Table basic="very" celled collapsing>
                             <Table.Header>

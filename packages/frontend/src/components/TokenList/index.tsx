@@ -8,7 +8,7 @@ import { Button, Container, Table, Header, List, Radio } from 'semantic-ui-react
 import { BalanceTableRow } from '../../containers/Account/BalanceTableRow/balanceTableRow';
 import { TokenBalance } from '../../containers/App';
 import { Dictionary } from 'lodash';
-import { TokenAllowance } from '../../containers/Steps/SetAllowances';
+import { TokenAllowance } from '../../containers/App';
 
 interface Props {
     allowances: Dictionary<TokenAllowance>;
@@ -17,7 +17,7 @@ interface Props {
 
 const ETHER_TOKEN_NAME = 'ETH';
 
-export default class TokenList extends React.Component<Props, {}> {
+export default class TokenList extends React.Component<Props> {
 
     constructor(props: Props) {
         super(props);
@@ -34,7 +34,6 @@ export default class TokenList extends React.Component<Props, {}> {
                     <List.Item key={tokenAllowance.token.symbol} style={{textAlign: 'left'}}>
                         <List.Content floated="right">
                             <Radio
-                                tokenAllowance={tokenAllowance} 
                                 toggle={true} 
                                 checked={tokenAllowance.allowance.greaterThan(0)}
                                 onChange={() => onChange(tokenAllowance)}

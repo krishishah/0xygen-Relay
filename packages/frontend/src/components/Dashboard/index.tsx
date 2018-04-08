@@ -10,7 +10,7 @@ export class Dashboard extends React.Component {
     const { activeItem } = this.state;
 
     return (
-      <div style={{ padding: '1em' }}>
+      <div style={{ marginBottom: '4em' }}>
         <Menu borderless={true} size="large" fixed="top" color="blue">
           <Menu.Item primary="true" icon="lab" name="OXYGEN DEX"/>
           

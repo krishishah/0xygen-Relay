@@ -7,9 +7,9 @@ import { Dashboard } from '../../components/Dashboard';
 import InstallMetamask from '../../components/InstallMetamask';
 import * as Web3 from 'web3';
 import * as RPCSubprovider from 'web3-provider-engine/subproviders/rpc';
-import { Divider, Container, Segment, Card, Step, Icon, Grid } from 'semantic-ui-react';
+import { Divider, Container, Segment, Card, Step, Icon, Grid, DropdownItemProps } from 'semantic-ui-react';
 import { InjectedWeb3Subprovider, RedundantRPCSubprovider } from '@0xproject/subproviders';
-import { EasyTradeSteps } from '../../components/SimpleTradeSteps';
+import { SimpleTradeStepsHeader, SimpleTradeStep } from '../../components/SimpleTradeSteps';
 import GridColumn from 'semantic-ui-react/dist/commonjs/collections/Grid/GridColumn';
 import { ZeroEx, Token } from '0x.js';
 import * as _ from 'lodash';
@@ -17,6 +17,7 @@ import { BigNumber } from 'bignumber.js';
 import { Dictionary } from 'lodash';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import SetAllowances from '../Steps/SetAllowances';
+import TradeTokens from '../Steps/TradeTokens';
 
 const Web3ProviderEngine = require('web3-provider-engine');
 
@@ -37,12 +38,20 @@ export interface TokenBalance {
     balance: BigNumber;
 }
 
-interface Props { }
+export interface TokenAllowance {
+    token: Token;
+    allowance: BigNumber;
+}
+
+interface Props {}
 
 interface State {
     accounts: string[];
     tokenBalances: Dictionary<TokenBalance>;
     etherBalance: BigNumber;
+    activeStep: SimpleTradeStep;
+    tokensWithAllowances: Dictionary<TokenAllowance>;
+    zeroExRegistryTokens: Token[];
 }
 
 export default class App extends React.Component<Props, State> {
@@ -57,7 +66,10 @@ export default class App extends React.Component<Props, State> {
         this.state = { 
             accounts: [''], 
             tokenBalances: {},
-            etherBalance: new BigNumber(0)
+            etherBalance: new BigNumber(0),
+            activeStep: 'Allowance',
+            tokensWithAllowances: {},
+            zeroExRegistryTokens: []
         };
     }
 
@@ -143,42 +155,155 @@ export default class App extends React.Component<Props, State> {
         this.setState((prev, props) => {
             return { ...prev, tokenBalances: userTokenBalances, accounts: addresses };
         });
-    };
+    }
 
+    private fetchTokenAllowance = async (token: Token) => {
+        const zeroEx: ZeroEx = this.zeroEx;
+        const account = this.state.accounts[0];
+
+        try {
+            const allowance = await zeroEx.token.getProxyAllowanceAsync(token.address, account);
+            return { token: token, allowance: allowance };
+        } catch (e) {
+            console.log(e);
+            return { token: token, allowance: new BigNumber(0) };
+        }
+    }
+
+    private setTokenAllowance = async (tokenAllowance: TokenAllowance) => {
+        const zeroEx: ZeroEx = this.zeroEx;
+        const account = this.state.accounts[0];
+        
+        if (tokenAllowance.allowance.equals(0)) {
+            try {
+                const txHash = await zeroEx.token.setUnlimitedProxyAllowanceAsync(
+                    tokenAllowance.token.address, 
+                    account
+                );
+            } catch (e) {
+                console.log(e);
+            }
+        } else {
+            try {
+                const txHash = await zeroEx.token.setProxyAllowanceAsync(
+                    tokenAllowance.token.address, 
+                    account,
+                    new BigNumber(0)
+                );
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    }
+    
+    private fetchAllowances = async () => {
+        const zeroEx: ZeroEx = this.zeroEx;
+        const account = this.state.accounts[0];
+        let tokensWithAllowances = this.state.tokensWithAllowances;
+
+        const tokens = await this.zeroEx.tokenRegistry.getTokensAsync();
+
+        const zeroExRegistryTokenAllowancePromises = _.map(tokens, async (token: Token): Promise<TokenAllowance> => {
+            return await this.fetchTokenAllowance(token);
+        });
+
+        const zeroExRegistryTokenAllowances = await Promise.all(zeroExRegistryTokenAllowancePromises);
+
+        // Convert all of the Units into more Human Readable numbers
+        // Many ERC20 tokens go to 18 decimal places
+        _.each(zeroExRegistryTokenAllowances, (tokenAllowance: TokenAllowance) => {
+            if ((tokenAllowance.allowance && tokenAllowance.allowance.gt(0))
+                || this.state.tokensWithAllowances[tokenAllowance.token.symbol]) {
+                tokenAllowance.allowance = ZeroEx.toUnitAmount(
+                    tokenAllowance.allowance,
+                    tokenAllowance.token.decimals
+                );
+                tokensWithAllowances[tokenAllowance.token.symbol] = tokenAllowance;
+            }
+        });
+
+        this.setState({
+            tokensWithAllowances,
+            zeroExRegistryTokens: tokens
+        });
+    }
+
+    private changeStep = async (newStep: SimpleTradeStep) => {
+        this.setState({
+            activeStep: newStep
+        });
+    }
+
+    // tslint:disable-next-line:member-ordering
     render() {
         // Detect if Web3 is found, if not, ask the user to install Metamask
         // tslint:disable-next-line:no-any
         if (typeof (window as any).web3 !== 'undefined') {
+            let activeStep = this.state.activeStep;
+            let stepToRender;
+            
+            switch (activeStep) {
+                case 'Allowance': {
+                    stepToRender = (
+                        <SetAllowances 
+                            zeroEx={this.zeroEx} 
+                            accounts={this.state.accounts}
+                            tokensWithAllowances={this.state.tokensWithAllowances}
+                            zeroExRegistryTokens={this.state.zeroExRegistryTokens}
+                            fetchAllowances={this.fetchAllowances}
+                            setTokenAllowance={this.setTokenAllowance}
+                            fetchTokenAllowance={this.fetchTokenAllowance}
+                        />
+                    );
+                    break;
+                }
+                case 'Trade': {
+                    stepToRender = (
+                        <TradeTokens 
+                            zeroEx={this.zeroEx}
+                            tokensWithAllowance={this.state.tokensWithAllowances} 
+                            zeroExProxyTokens={this.state.zeroExRegistryTokens}
+                        />
+                    );
+                    break;
+                }
+                default:
+                    break;
+            }
+
             return (
-                <div style={{ padding: '4em 4em 4em 4em' }}>
+                <div>
                     <Dashboard/>
-                    <Card raised={true} centered={true} style={{ padding: '1em', minWidth: '800px'}}>
+                    <Card 
+                        raised={true} 
+                        centered={true} 
+                        style={{ padding: '1em 1em 1em 1em', margin: '4em 4em 4em 4em', minWidth: '1000px'}}
+                    >
                         <Card.Content>
                             <Card.Header>
-                                <EasyTradeSteps/>
+                                <SimpleTradeStepsHeader 
+                                    activeStep={this.state.activeStep}
+                                    changeStep={this.changeStep}
+                                />
                             </Card.Header>
                         </Card.Content>
-                    <Grid textAlign="center" columns="2">
-                        <GridColumn>
-                            <Card.Content>
-                                {/* <Faucet zeroEx={this.zeroEx} /> */}
-                                <SetAllowances zeroEx={this.zeroEx} accounts={this.state.accounts} />
-                            </Card.Content>
-                            <Card.Content>
-                                {/* <Web3Actions web3={this.web3} /> */}
-                            </Card.Content>
-                        </GridColumn>
-                        <GridColumn>
-                            <Card.Content>
-                                <Account 
-                                    accounts={this.state.accounts}
-                                    tokenBalances={this.state.tokenBalances}
-                                    etherBalance={this.state.etherBalance}
-                                    fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
-                                />
-                            </Card.Content>
-                        </GridColumn>
-                    </Grid>
+                        <Grid columns="2" style={{height: '100%'}}>
+                            <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
+                                <Card.Content style={{height: '100%'}}>
+                                    {stepToRender}
+                                </Card.Content>
+                            </GridColumn>
+                            <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
+                                <Card.Content>
+                                    <Account 
+                                        accounts={this.state.accounts}
+                                        tokenBalances={this.state.tokenBalances}
+                                        etherBalance={this.state.etherBalance}
+                                        fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
+                                    />
+                                </Card.Content>
+                            </GridColumn>
+                        </Grid>
                     </Card>
                 </div>
             );
