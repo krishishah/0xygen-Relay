@@ -12,10 +12,13 @@ import {
     Dropdown, 
     DropdownItemProps, 
     DropdownMenuProps, 
-    DropdownItem 
+    DropdownItem, 
+    DropdownProps
 } from 'semantic-ui-react';
+import TokenList from '../../../components/TokenList';
+import { SyntheticEvent } from 'react';
 
-interface TokenAllowance {
+export interface TokenAllowance {
     token: Token;
     allowance: BigNumber;
 }
@@ -26,7 +29,7 @@ interface Props {
  }
 
 interface State {
-    tokensWithAllowances: Dictionary<TokenAllowance>;
+    tokensChosenOrWithAllowances: Dictionary<TokenAllowance>;
     zeroExRegistryTokens: DropdownItemProps[];
  }
 
@@ -36,7 +39,7 @@ export default class SetAllowances extends React.Component<Props, State> {
         super(props);
 
         this.state = {
-            tokensWithAllowances: {},
+            tokensChosenOrWithAllowances: {},
             zeroExRegistryTokens: []
         };
     }
@@ -49,27 +52,39 @@ export default class SetAllowances extends React.Component<Props, State> {
         // tslint:disable-next-line:align
         }, 5000);
     }
+
+    private fetchTokenAllowance = async (token: Token) => {
+        const zeroEx: ZeroEx = this.props.zeroEx;
+        const account = this.props.accounts[0];
+
+        try {
+            const allowance = await zeroEx.token.getProxyAllowanceAsync(token.address, account);
+            return { token: token, allowance: allowance };
+        } catch (e) {
+            console.log(e);
+            return { token: token, allowance: new BigNumber(0) };
+        }
+    }
     
     private fetchAllowances = async () => {
         const zeroEx: ZeroEx = this.props.zeroEx;
-        // const account: string = await this.props.zeroEx.getAvailableAddressesAsync()[0];
         const account = this.props.accounts[0];
-        let tokensWithAllowances = {};
+        let tokensChosenOrWithAllowances = this.state.tokensChosenOrWithAllowances;
 
         const tokens = await this.props.zeroEx.tokenRegistry.getTokensAsync();
             
         const zeroExRegistryTokens = _.map(tokens, (token: Token) =>{
-            return {key: token.symbol, value: token.symbol, text: `${token.symbol}: ${token.name}`};
+            return {
+                key: token.symbol, 
+                token: token, 
+                text: `${token.symbol}: ${token.name}`,
+                onClick: this.chooseTokenFromDropDown,
+                active: tokensChosenOrWithAllowances[token.symbol] !== undefined
+            };
         });
 
         const zeroExRegistryTokenAllowancePromises = _.map(tokens, async (token: Token): Promise<TokenAllowance> => {
-            try {
-                const allowance = await zeroEx.token.getProxyAllowanceAsync(token.address, account);
-                return { token: token, allowance: allowance };
-            } catch (e) {
-                console.log(e);
-                return { token: token, allowance: new BigNumber(0) };
-            }
+            return await this.fetchTokenAllowance(token);
         });
 
         const zeroExRegistryTokenAllowances = await Promise.all(zeroExRegistryTokenAllowancePromises);
@@ -78,48 +93,54 @@ export default class SetAllowances extends React.Component<Props, State> {
         // Many ERC20 tokens go to 18 decimal places
         _.each(zeroExRegistryTokenAllowances, (tokenAllowance: TokenAllowance) => {
             if (tokenAllowance.allowance && tokenAllowance.allowance.gt(0)) {
-                tokensWithAllowances[tokenAllowance.token.symbol] = tokenAllowance;
+                tokenAllowance.allowance = ZeroEx.toUnitAmount(
+                    tokenAllowance.allowance,
+                    tokenAllowance.token.decimals
+                );
+                tokensChosenOrWithAllowances[tokenAllowance.token.symbol] = tokenAllowance;
             }
         });
 
         this.setState({
-            tokensWithAllowances,
+            tokensChosenOrWithAllowances,
             zeroExRegistryTokens
         });
     }
 
+    private chooseTokenFromDropDown = async (
+        event: React.MouseEvent<HTMLDivElement>, 
+        data: DropdownItemProps
+    ) => {
+        const zeroExRegistryToken: Token = data.token;
+        const newTokenAllowace = await this.fetchTokenAllowance(zeroExRegistryToken);
 
-    private async dispenseETH(): Promise<void> {
-        const addresses = await this.props.zeroEx.getAvailableAddressesAsync();
-        const address = addresses[0];
-        const url = `https://faucet.0xproject.com/ether/${address}`;
-        await fetch(url);
+        const tokenSymbol = zeroExRegistryToken.symbol;
+        const tokensChosenOrWithAllowances = Object.assign({}, this.state.tokensChosenOrWithAllowances);
+        tokensChosenOrWithAllowances[zeroExRegistryToken.symbol] = newTokenAllowace;
+
+        this.setState({tokensChosenOrWithAllowances});
     }
-    private async orderWETH(): Promise<void> {
-        const addresses = await this.props.zeroEx.getAvailableAddressesAsync();
-        const address = addresses[0];
-        const url = `https://faucet.0xproject.com/order/weth/${address}`;
-        const response = await fetch(url);
-        const bodyJson = await response.json();
 
-        const signedOrder: SignedOrder = relayerResponseJsonParsers.parseOrderJson(bodyJson);
-        console.log(signedOrder);
-
-        const fillAmount = ZeroEx.toBaseUnitAmount(signedOrder.takerTokenAmount, 18);
-        try {
-            await this.props.zeroEx.exchange.fillOrderAsync(signedOrder, fillAmount, true, address);
-        } catch (e) {
-            console.log(e);
-        }
-    }
     // tslint:disable-next-line:member-ordering
     render() {
         const zeroExRegistryTokens = this.state.zeroExRegistryTokens;
 
         return (
-            <Container textAlign="center">
-                  <Dropdown placeholder='Select Token' fluid search selection options={zeroExRegistryTokens} />
-            </Container>
+            <div>
+                <div>
+                    <Dropdown 
+                        placeholder="Select Token"
+                        closeOnChange={true}
+                        fluid={true} 
+                        selection={true} 
+                        options={zeroExRegistryTokens}
+                    />
+                </div>
+                <br/>
+                <div>
+                    <TokenList allowances={this.state.tokensChosenOrWithAllowances}/>
+                </div>
+            </div>
         );
     }
 }

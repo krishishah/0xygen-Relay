@@ -65,15 +65,6 @@ export default class App extends React.Component<Props, State> {
         this.initialiseState();
     }
 
-    componentDidMount() {
-        this.fetchAccountDetailsAsync();
-        // Poll for the account details and keep it refreshed
-        setInterval(() => {
-            this.fetchAccountDetailsAsync();
-        // tslint:disable-next-line:align
-        }, 3000);
-    }
-
     initialiseState = () => {
         if (typeof (window as any).web3 !== 'undefined') {
             // Add metamask subprovider to engine if it exists
@@ -84,6 +75,11 @@ export default class App extends React.Component<Props, State> {
             this.web3Wrapper = new Web3Wrapper(this.providerEngine);
             this.zeroEx = new ZeroEx(this.providerEngine, { networkId: KOVAN_NETWORK_ID });
             this.web3 = new Web3(this.providerEngine);
+
+            setInterval(() => {
+                this.fetchAccountDetailsAsync();
+            // tslint:disable-next-line:align
+            }, 3000);
         }
     }
 
@@ -154,9 +150,9 @@ export default class App extends React.Component<Props, State> {
         // tslint:disable-next-line:no-any
         if (typeof (window as any).web3 !== 'undefined') {
             return (
-                <div style={{ padding: '4em' }}>
+                <div style={{ padding: '4em 4em 4em 4em' }}>
                     <Dashboard/>
-                    <Card raised={true} centered={true} style={{ padding: '1em', minWidth: '1000px'}}>
+                    <Card raised={true} centered={true} style={{ padding: '1em', minWidth: '800px'}}>
                         <Card.Content>
                             <Card.Header>
                                 <EasyTradeSteps/>
@@ -169,7 +165,7 @@ export default class App extends React.Component<Props, State> {
                                 <SetAllowances zeroEx={this.zeroEx} accounts={this.state.accounts} />
                             </Card.Content>
                             <Card.Content>
-                                <Web3Actions web3={this.web3} />
+                                {/* <Web3Actions web3={this.web3} /> */}
                             </Card.Content>
                         </GridColumn>
                         <GridColumn>
