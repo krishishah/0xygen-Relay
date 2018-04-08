@@ -12,6 +12,7 @@ import { TokenAllowance } from '../../containers/Steps/SetAllowances';
 
 interface Props {
     allowances: Dictionary<TokenAllowance>;
+    setTokenAllowance: (tokenAllowance: TokenAllowance) => void;
 }
 
 const ETHER_TOKEN_NAME = 'ETH';
@@ -25,16 +26,18 @@ export default class TokenList extends React.Component<Props, {}> {
     render() {
         
         const allowances = this.props.allowances;
-
+        const onChange = this.props.setTokenAllowance;
         if (Object.keys(allowances).length > 0) {
             
             const TokenAllowances = _.map(allowances, (tokenAllowance: TokenAllowance, key: string) => {
                 return (
                     <List.Item key={tokenAllowance.token.symbol} style={{textAlign: 'left'}}>
                         <List.Content floated="right">
-                            <Radio 
+                            <Radio
+                                tokenAllowance={tokenAllowance} 
                                 toggle={true} 
                                 checked={tokenAllowance.allowance.greaterThan(0)}
+                                onChange={() => onChange(tokenAllowance)}
                             />
                         </List.Content>
                         <List.Content floated="left">

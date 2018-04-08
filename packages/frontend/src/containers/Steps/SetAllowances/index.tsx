@@ -65,6 +65,22 @@ export default class SetAllowances extends React.Component<Props, State> {
             return { token: token, allowance: new BigNumber(0) };
         }
     }
+
+    private setTokenAllowance = async (tokenAllowance: TokenAllowance) => {
+        const zeroEx: ZeroEx = this.props.zeroEx;
+        const account = this.props.accounts[0];
+        
+        if (tokenAllowance.allowance.equals(0)) {
+            try {
+                const txHash = await zeroEx.token.setUnlimitedProxyAllowanceAsync(
+                    tokenAllowance.token.address, 
+                    account
+                );
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    }
     
     private fetchAllowances = async () => {
         const zeroEx: ZeroEx = this.props.zeroEx;
@@ -138,7 +154,10 @@ export default class SetAllowances extends React.Component<Props, State> {
                 </div>
                 <br/>
                 <div>
-                    <TokenList allowances={this.state.tokensChosenOrWithAllowances}/>
+                    <TokenList 
+                        allowances={this.state.tokensChosenOrWithAllowances}
+                        setTokenAllowance={this.setTokenAllowance}
+                    />
                 </div>
             </div>
         );
