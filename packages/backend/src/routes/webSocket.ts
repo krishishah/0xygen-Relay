@@ -87,13 +87,13 @@ export class WebSocketHandler {
         description?: string
     ) {
         console.log('WS: Peer disconnected');
+        this.connectionMetadataSet.delete(connectionMetadata);
     }
 
     // tslint:disable-next-line:no-any
     private onMessageFromClientSocket(message: any, connectionMetadata: WebSocketConnectionMetadata) {
         if (message.type === 'utf8' && message.utf8Data !== undefined) {
-            
-            const parsedMessage = message.utf8Data as WebSocketMessage<Subscribe>;
+            const parsedMessage = JSON.parse(message.utf8Data) as WebSocketMessage<Subscribe>;
             console.log('WS: Received Message: ' + parsedMessage.type);
 
             if (parsedMessage.type === 'subscribe') {
