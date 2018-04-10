@@ -1,15 +1,29 @@
 import * as http from 'http';
-import { Service, Container } from 'typedi';
+import { Service } from 'typedi';
+import { RestService } from '../services/restService';
+import { SerializerUtils } from '../utils/serialization';
+import { EventPubSub } from '../services/eventPubSub';
 import {
     connection as WebSocketConnection,
     server as WebSocketServer,
     request as WebSocketRequest
 } from 'websocket';
-import { RestService } from '../services/restService';
-import { EventPubSub } from '../services/eventPubSub';
-import { OrderEvent, OrderAdded, OrderUpdated, ORDER_UPDATED, ORDER_ADDED } from '../types/events';
-import { SerializerUtils } from '../utils/serialization';
-import { WebSocketMessage, OrderbookUpdate, OrderbookSnapshot, Subscribe } from '../types/schemas';
+import { 
+    OrderEvent, 
+    OrderAdded, 
+    OrderUpdated, 
+    ORDER_UPDATED, 
+    ORDER_ADDED 
+} from '../types/events';
+import { 
+    WebSocketMessage, 
+    OrderbookUpdate, 
+    OrderbookSnapshot, 
+    Subscribe 
+} from '../types/schemas';
+import { ServerClient } from '../utils/serverClient';
+import { Container } from 'typedi/Container';
+import { App } from '../app';
 
 interface WebSocketConnectionMetadata {
     socketConnection: WebSocketConnection;
@@ -26,17 +40,16 @@ export class WebSocketHandler {
     /**
      * Initialize the Web Socket Handler
      */
-    constructor(
-        private wsServer: WebSocketServer, 
+    constructor( 
         private restService: RestService, 
         private pubSubClient: EventPubSub
     ) {
+        this.connectionMetadataSet = new Set();
         this.init();
     }
 
-    private webSocketConnectionHandler(request: WebSocketRequest) {
-        let socketConnection: WebSocketConnection | undefined;
-        socketConnection = request.accept();
+    webSocketConnectionHandler = (request: WebSocketRequest) => {
+        let socketConnection: WebSocketConnection = request.accept();
         console.log('WS: Connection accepted');
 
         const connectionMetadata: WebSocketConnectionMetadata = {
@@ -136,7 +149,6 @@ export class WebSocketHandler {
      * listeners.
      */
     private init() {
-        this.wsServer.on('request', this.webSocketConnectionHandler.bind(this));
         this.pubSubClient.subscribe(ORDER_UPDATED, this.handleOrderbookUpdate.bind(this));
         this.pubSubClient.subscribe(ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
     }

@@ -11,6 +11,7 @@ import { Container } from 'typedi/Container';
 import { ZeroExClient } from './utils/zeroExClient';
 import { server as WebSocketServer } from 'websocket';
 import * as http from 'http';
+import { WebSocketHandler } from './routes/webSocket';
 
 // Creates and configures an ExpressJS web server.
 @Service()
@@ -25,7 +26,7 @@ export class App {
     public wsServer: WebSocketServer;
 
     // Run configuration methods on the Express instance.
-    constructor(private v0RestApiRouter: V0RestApiRouter) {
+    constructor(private v0RestApiRouter: V0RestApiRouter, private wsHandler: WebSocketHandler) {
         this.express = express();
         this.wsServer = this.initialiseWebSocketServer();
         this.middleware();
@@ -63,8 +64,10 @@ export class App {
 
         const wsServer = new WebSocketServer({
             httpServer: server,
-            autoAcceptConnections: false,
+            autoAcceptConnections: false
         });
+
+        wsServer.on('request', this.wsHandler.webSocketConnectionHandler);
 
         return wsServer;
     }

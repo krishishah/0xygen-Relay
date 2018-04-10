@@ -9,11 +9,11 @@ import { create } from 'domain';
 import { Application } from 'express';
 import * as express from 'express';
 import { ServerClient } from './utils/serverClient';
-import { server as WebSocketServer } from 'websocket';
+import { server as WebSocketServer, request as WebSocketRequest } from 'websocket';
 
-const host = normalizePort(process.env.HOST || 'localhost');
-const httpPort = normalizePort(process.env.PORT || 3000);
-const wsPort = normalizePort(process.env.WSPORT || 3001);
+const host: string = process.env.HOST || 'localhost';
+const httpPort: number = normalizePort(process.env.PORT || 3000) as number;
+const wsPort: number = normalizePort(process.env.WSPORT || 3001) as number;
 
 async function createServer(): Promise<Express.Application> {
     debug('ts-express:server');
@@ -27,7 +27,11 @@ async function createServer(): Promise<Express.Application> {
         const wsServer = Container.get(App).wsServer;
         const httpServer = http.createServer(expressServer);
 
-        httpServer.listen(httpPort, () => console.log(`Standard relayer API (HTTP) listening on port ${httpPort}`));
+        httpServer.listen(
+            httpPort, 
+            host, 
+            () => console.log(`Standard relayer API (HTTP) listening on port ${httpPort}`)
+        );
         httpServer.on('error', onError);
 
         wsServer

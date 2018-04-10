@@ -6,6 +6,7 @@ import { SignedOrder } from '0x.js';
 import { SerializerUtils } from '../utils/serialization';
 import { SignedOrderSchema } from '../types/schemas';
 import { ZeroEx } from '0x.js/lib/src/0x';
+import { WebSocketHandler } from './webSocket';
 
 @Service()
 export class V0RestApiRouter {
@@ -15,7 +16,7 @@ export class V0RestApiRouter {
     /**
      * Initialize the RestApiRouter
      */
-    constructor(private restService: RestService) {
+    constructor(private restService: RestService, private wsHandler: WebSocketHandler) {
         this.router = Router();
         this.init();
     }
