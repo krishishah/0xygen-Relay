@@ -22,3 +22,21 @@ export interface TokenPairOrderbookSchema {
     bids: SignedOrderSchema[];
     asks: SignedOrderSchema[];
 }
+
+export interface WebSocketMessage<T extends OrderbookUpdate | Subscribe | OrderbookSnapshot> {
+    type: string;
+    channel: string;
+    requestId: number;
+    payload: T;
+}
+
+export type OrderbookUpdate = SignedOrderSchema;
+
+export interface Subscribe {
+    baseTokenAddress: string;
+    quoteTokenAddress: string;
+    snapshot: boolean;
+    limit: number;
+}
+
+export type OrderbookSnapshot = TokenPairOrderbookSchema;

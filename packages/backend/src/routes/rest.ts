@@ -65,17 +65,17 @@ export class V0RestApiRouter {
         this.restService
             .getOrder(orderHashHex)
             .then(
-            order => {
-                res.setHeader('Content-Type', 'application/json');
-                res.json(SerializerUtils.SignedOrdertoJSON(order));
-                res.status(201).send();
-            })
+                order => {
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(SerializerUtils.SignedOrdertoJSON(order));
+                    res.status(201).send();
+                })
             .catch(
-            error => {
-                res.status(404).send({
-                    error: error.statusMessage
+                error => {
+                    res.status(404).send({
+                        error: error.statusMessage
+                    });
                 });
-            });
     }
 
     /**
