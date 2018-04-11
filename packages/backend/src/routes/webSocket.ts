@@ -126,6 +126,7 @@ export class WebSocketHandler {
         }
     }
 
+    // TODO: Implement special logic for Order fills and cancellations
     private handleOrderbookUpdate(data: OrderEvent<OrderAdded | OrderUpdated>) { 
         const { baseTokenAddress, quoteTokenAddress } = data.payload;
         const subscriptionChannel = `${baseTokenAddress}-${quoteTokenAddress}`;
