@@ -11,27 +11,27 @@
     "@0xproject/utils": "0.3.0",
     "@0xproject/web3-wrapper": "0.1.10",
     "lodash": "4.17.5",
-    "react": "^16.3.0",
-    "react-dom": "^16.3.0",
+    "react": "^16.3.1",
+    "react-dom": "^16.3.1",
     "react-scripts-ts": "2.14.0",
     "semantic-ui-css": "^2.3.1",
-    "semantic-ui-react": "^0.79.0",
+    "semantic-ui-react": "^0.79.1",
     "types-bn": "0.0.1",
-    "web3": "^0.20.4",
+    "web3": "^0.20.6",
     "web3-provider-engine": "^13.8.0"
   },
   "scripts": {
-    "start": "react-scripts-ts start",
+    "start": "PORT=5000 react-scripts-ts start",
     "build": "react-scripts-ts build",
     "test": "react-scripts-ts test --env=jsdom",
     "eject": "react-scripts-ts eject"
   },
   "devDependencies": {
-    "@types/jest": "^22.2.2",
+    "@types/jest": "^22.2.3",
     "@types/lodash": "4.14.102",
-    "@types/node": "^9.6.1",
-    "@types/react": "^16.3.0",
-    "@types/react-dom": "^16.0.4",
+    "@types/node": "^9.6.4",
+    "@types/react": "^16.3.9",
+    "@types/react-dom": "^16.0.5",
     "typescript": "^2.8.1"
   }
 }

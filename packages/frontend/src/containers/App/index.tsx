@@ -18,20 +18,9 @@ import { Dictionary } from 'lodash';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import SetAllowances from '../Steps/SetAllowances';
 import TradeTokens from '../Steps/TradeTokens';
-
+import { KOVAN_RPC, KOVAN_NETWORK_ID, ETHER_DECIMAL_PLACES, RELAYER_URL } from 'src';
+import { RelayerWebSocketClient } from 'src/api/webSocket/relayerWebSocketClient';
 const Web3ProviderEngine = require('web3-provider-engine');
-
-// Kovan is a test network
-// Please ensure you have Metamask installed
-// and it is connected to the Kovan test network
-const KOVAN_NETWORK_ID = 42;
-const KOVAN_RPC = 'https://kovan.infura.io';
-
-const TEST_RPC_NETWORK_ID = 50;
-const TEST_RPC = 'http://localhost:8545';
-
-const ETHER_TOKEN_SYMBOL = 'ETH';
-const ETHER_DECIMAL_PLACES = 18;
 
 export interface TokenBalance {
     token: Token;
@@ -59,6 +48,7 @@ export default class App extends React.Component<Props, State> {
     providerEngine: any;
     zeroEx: ZeroEx;
     web3Wrapper: Web3Wrapper;
+    relayerWebSocketClient: RelayerWebSocketClient;
 
     constructor(props: Props) {
         super(props);
@@ -87,6 +77,11 @@ export default class App extends React.Component<Props, State> {
             this.web3Wrapper = new Web3Wrapper(this.providerEngine);
             this.zeroEx = new ZeroEx(this.providerEngine, { networkId: KOVAN_NETWORK_ID });
             this.web3 = new Web3(this.providerEngine);
+            this.relayerWebSocketClient = new RelayerWebSocketClient(
+                this.providerEngine, 
+                { networkId: KOVAN_NETWORK_ID },
+                RELAYER_URL
+            );
 
             setInterval(() => {
                 this.fetchAccountDetailsAsync();
@@ -263,6 +258,7 @@ export default class App extends React.Component<Props, State> {
                             zeroEx={this.zeroEx}
                             tokensWithAllowance={this.state.tokensWithAllowances} 
                             zeroExProxyTokens={this.state.zeroExRegistryTokens}
+                            relayerWebSocketClient={this.relayerWebSocketClient}
                         />
                     );
                     break;
@@ -272,7 +268,7 @@ export default class App extends React.Component<Props, State> {
             }
 
             return (
-                <div>
+                <Container>
                     <Dashboard/>
                     <Card 
                         raised={true} 
@@ -305,7 +301,7 @@ export default class App extends React.Component<Props, State> {
                             </GridColumn>
                         </Grid>
                     </Card>
-                </div>
+                </Container>
             );
         } else {
             return (

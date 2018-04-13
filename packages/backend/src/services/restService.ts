@@ -27,8 +27,10 @@ export class RestService {
     public getOrderBook(baseTokenAddress: string, quoteTokenAddress: string): Promise<TokenPairOrderbook> {
         return Promise.all(
             [
-                // Signed orders in the bids array have quote as the makerTokenAddress and base as the takerTokenAddress
+                // Bids have quote as the makerTokenAddress and base as the takerTokenAddress
                 this.orderRepository.getTokenPairOrders(quoteTokenAddress, baseTokenAddress),
+                
+                // Asks have base as the makerTokenAddress and quots as the takerTokenAddress
                 this.orderRepository.getTokenPairOrders(baseTokenAddress, quoteTokenAddress) 
             ]
         )

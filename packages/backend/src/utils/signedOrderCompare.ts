@@ -1,5 +1,6 @@
 import { SignedOrder } from '0x.js/lib/src/types';
 
+// This compare function assumes MAKER/TAKER token pair
 export function signedOrderCompare(x: SignedOrder, y: SignedOrder): number {
     const xPrice = x.takerTokenAmount.dividedBy(x.makerTokenAmount);
     const yPrice = y.takerTokenAmount.dividedBy(y.makerTokenAmount);
