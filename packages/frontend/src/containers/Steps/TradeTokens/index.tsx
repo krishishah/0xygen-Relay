@@ -6,9 +6,9 @@ import { Token } from '0x.js';
 import { Dictionary } from 'lodash';
 import { TokenAllowance } from '../../App';
 import * as _ from 'lodash';
-import { RelayerWebSocketClient } from '../../../api/webSocket/relayerWebSocketClient';
-import { RelayerWebSocketChannel } from '../../../api/webSocket/relayerWebSocketChannel';
+import { RelayerWebSocketChannel } from '../../../api/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
+import { TokenPair, WebSocketMessage, OrderbookSnapshot, OrderbookUpdate, TokenPairOrderbook } from '../../../types';
 import { 
     DropdownProps, 
     Dropdown, 
@@ -26,7 +26,8 @@ import {
     Divider, 
     Label
 } from 'semantic-ui-react';
-import { TokenPair, WebSocketMessage, OrderbookSnapshot, OrderbookUpdate } from '../../../types';
+import { SerializerUtils } from '../../../utils';
+import { SignedOrder } from '@0xproject/types';
 
 export type TradeAction = 'Buy' | 'Sell';
 
@@ -34,7 +35,6 @@ interface Props {
     zeroEx: ZeroEx;
     tokensWithAllowance: Dictionary<TokenAllowance>;
     zeroExProxyTokens: Token[];
-    relayerWebSocketClient: RelayerWebSocketClient;
 }
 
 interface State {
@@ -42,6 +42,7 @@ interface State {
     tokenQuantity: number;
     baseToken: Token | undefined;
     quoteToken: Token | undefined;
+    orderbook: TokenPairOrderbook | undefined;
 }
 
 export default class TradeTokens extends React.Component<Props, State> {
@@ -55,7 +56,8 @@ export default class TradeTokens extends React.Component<Props, State> {
             tradeAction: 'Buy',
             tokenQuantity: 0,
             baseToken: undefined,
-            quoteToken: undefined
+            quoteToken: undefined,
+            orderbook: undefined
         };
     }
 
@@ -92,7 +94,6 @@ export default class TradeTokens extends React.Component<Props, State> {
     }
 
     onPropertyChanged = async () => {
-        const relayerWebSocketClient = this.props.relayerWebSocketClient;
         let baseToken = this.state.baseToken;
         let quoteToken = this.state.quoteToken;
 
@@ -112,9 +113,46 @@ export default class TradeTokens extends React.Component<Props, State> {
         }
     }
 
-    onSubscribe = (snapshot: WebSocketMessage<OrderbookSnapshot>) => { }
+    onSnapshot = (snapshot: WebSocketMessage<OrderbookSnapshot>, tokenPair: TokenPair) => {
+        const tokenPairOrderbook = SerializerUtils.TokenPairOrderbookFromJSON(snapshot.payload);
+        // Log number of bids and asks currently in the orderbook
+        const numberOfBids = tokenPairOrderbook.bids.length;
+        const numberOfAsks = tokenPairOrderbook.asks.length;
+        console.log(`SNAPSHOT: ${numberOfBids} bids & ${numberOfAsks} asks`);
 
-    onUpdate = (update: WebSocketMessage<OrderbookUpdate>) => { }
+        this.setState({
+            orderbook: tokenPairOrderbook
+        });
+     }
+
+    onUpdate = async (update: WebSocketMessage<OrderbookUpdate>, tokenPair: TokenPair) => {
+        const zeroEx = this.props.zeroEx;
+        
+        const order: SignedOrder = SerializerUtils.SignedOrderfromJSON(update.payload);
+        
+        // Log order hash
+        const orderHash = ZeroEx.getOrderHashHex(order);
+        console.log(`NEW ORDER: ${orderHash}`);
+
+        // Look for asks
+        if (order.makerTokenAddress === tokenPair.base.address) {
+            // Calculate the rate of the new order
+            const zrxWethRate = order.makerTokenAmount.div(order.takerTokenAmount);
+            // If the rate is equal to our better than the rate we are looking for, try and fill it
+            const TARGET_RATE = 6; // ZRX/WETH
+            if (zrxWethRate.greaterThanOrEqualTo(TARGET_RATE)) {
+                const addresses = await zeroEx.getAvailableAddressesAsync();
+                // This can be any available address of you're choosing, in this example addresses[0] is actually
+                // creating and signing the new orders we're receiving so we need to fill the order with
+                // a different address
+                const takerAddress = addresses[1];
+                const txHash = await zeroEx.exchange.fillOrderAsync(
+                    order, order.takerTokenAmount, true, takerAddress);
+                await zeroEx.awaitTransactionMinedAsync(txHash);
+                console.log(`ORDER FILLED: ${orderHash}`);
+            }
+        }
+    }
 
     render() {
         const zeroExProxyTokens: Token[] = this.props.zeroExProxyTokens;
@@ -183,7 +221,7 @@ export default class TradeTokens extends React.Component<Props, State> {
             <Form style={{ height: '100%' }}>
                 <RelayerWebSocketChannel
                     ref={ref => (this.relayerWsChannel = ref)} 
-                    onSnapshot={this.onSubscribe}
+                    onSnapshot={this.onSnapshot}
                     onUpdate={this.onUpdate}
                 />
                 <Form.Group inline style={{display: 'flex', justifyContent: 'center'}}>
