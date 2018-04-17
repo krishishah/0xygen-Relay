@@ -7,18 +7,44 @@ import { Dashboard } from '../../components/Dashboard';
 import InstallMetamask from '../../components/InstallMetamask';
 import * as Web3 from 'web3';
 import * as RPCSubprovider from 'web3-provider-engine/subproviders/rpc';
-import { Divider, Container, Segment, Card, Step, Icon, Grid, DropdownItemProps } from 'semantic-ui-react';
-import { InjectedWeb3Subprovider, RedundantRPCSubprovider } from '@0xproject/subproviders';
-import { SimpleTradeStepsHeader, SimpleTradeStep } from '../../components/SimpleTradeSteps';
+import { 
+    Divider, 
+    Container, 
+    Segment, 
+    Card, 
+    Step, 
+    Icon, 
+    Grid, 
+    DropdownItemProps 
+} from 'semantic-ui-react';
+import { 
+    InjectedWeb3Subprovider, 
+    RedundantRPCSubprovider 
+} from '@0xproject/subproviders';
+import { 
+    SimpleTradeStepsHeader, 
+    SimpleTradeStep 
+} from '../../components/SimpleTradeSteps';
 import GridColumn from 'semantic-ui-react/dist/commonjs/collections/Grid/GridColumn';
-import { ZeroEx, Token } from '0x.js';
+import { 
+    ZeroEx, 
+    Token 
+} from '0x.js';
 import * as _ from 'lodash';
 import { BigNumber } from 'bignumber.js';
 import { Dictionary } from 'lodash';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import SetAllowances from '../Steps/SetAllowances';
 import TradeTokens from '../Steps/TradeTokens';
-import { KOVAN_RPC, KOVAN_NETWORK_ID, ETHER_DECIMAL_PLACES, RELAYER_URL } from 'src';
+import { 
+    KOVAN_RPC, 
+    KOVAN_NETWORK_ID, 
+    ETHER_DECIMAL_PLACES, 
+    RELAYER_URL,   
+    TEST_RPC, 
+    TEST_RPC_NETWORK_ID 
+} from '../../config';
+
 const Web3ProviderEngine = require('web3-provider-engine');
 
 export interface TokenBalance {
@@ -70,10 +96,10 @@ export default class App extends React.Component<Props, State> {
             // Add metamask subprovider to engine if it exists
             this.providerEngine = new Web3ProviderEngine();
             this.providerEngine.addProvider(new InjectedWeb3Subprovider((window as any).web3.currentProvider));
-            this.providerEngine.addProvider(new RedundantRPCSubprovider([KOVAN_RPC]));
+            this.providerEngine.addProvider(new RedundantRPCSubprovider([TEST_RPC]));
             this.providerEngine.start();
             this.web3Wrapper = new Web3Wrapper(this.providerEngine);
-            this.zeroEx = new ZeroEx(this.providerEngine, { networkId: KOVAN_NETWORK_ID });
+            this.zeroEx = new ZeroEx(this.providerEngine, { networkId: TEST_RPC_NETWORK_ID });
             this.web3 = new Web3(this.providerEngine);
 
             setInterval(() => {
@@ -251,6 +277,7 @@ export default class App extends React.Component<Props, State> {
                             zeroEx={this.zeroEx}
                             tokensWithAllowance={this.state.tokensWithAllowances} 
                             zeroExProxyTokens={this.state.zeroExRegistryTokens}
+                            web3={this.web3}
                         />
                     );
                     break;

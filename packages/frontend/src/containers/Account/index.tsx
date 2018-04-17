@@ -5,7 +5,7 @@ import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import * as Web3 from 'web3';
 import { BigNumber } from '@0xproject/utils';
 import { Button, Container, Table, Header } from 'semantic-ui-react';
-import { BalanceTableRow } from '../../containers/Account/BalanceTableRow/balanceTableRow';
+import { BalanceTableRow } from '../../containers/Account/BalanceTableRow';
 import { TokenBalance } from '../../containers/App';
 import { Dictionary } from 'lodash';
 
