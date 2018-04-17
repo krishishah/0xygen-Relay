@@ -37,7 +37,10 @@ async function createServer(): Promise<Express.Application> {
         wsServer
             .config
             .httpServer[0]
-            .listen(wsPort, () => console.log(`Standard relayer API (WS) listening on port  ${wsPort}`));
+            .listen(
+                wsPort,
+                host, 
+                () => console.log(`Standard relayer API (WS) listening on port  ${wsPort}`));
 
         const serverClient: ServerClient = ServerClient.createInstance(httpServer, wsServer, dbConnection);
 

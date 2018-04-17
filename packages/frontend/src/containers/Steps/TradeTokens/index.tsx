@@ -1,5 +1,14 @@
 import * as React from 'react';
 import { promisify } from '@0xproject/utils';
+import { ZeroEx } from '0x.js/lib/src/0x';
+import Faucet from '../../../components/Faucet';
+import { Token } from '0x.js';
+import { Dictionary } from 'lodash';
+import { TokenAllowance } from '../../App';
+import * as _ from 'lodash';
+import { RelayerWebSocketClient } from '../../../api/webSocket/relayerWebSocketClient';
+import { RelayerWebSocketChannel } from '../../../api/webSocket/relayerWebSocketChannel';
+import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
 import { 
     DropdownProps, 
     Dropdown, 
@@ -17,14 +26,7 @@ import {
     Divider, 
     Label
 } from 'semantic-ui-react';
-import { ZeroEx } from '0x.js/lib/src/0x';
-import Faucet from '../../../components/Faucet';
-import { Token } from '0x.js';
-import { Dictionary } from 'lodash';
-import { TokenAllowance } from '../../App';
-import * as _ from 'lodash';
-import { RelayerWebSocketClient } from 'src/api/webSocket/relayerWebSocketClient';
-import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
+import { TokenPair, WebSocketMessage, OrderbookSnapshot, OrderbookUpdate } from '../../../types';
 
 export type TradeAction = 'Buy' | 'Sell';
 
@@ -43,6 +45,8 @@ interface State {
 }
 
 export default class TradeTokens extends React.Component<Props, State> {
+
+    relayerWsChannel: RelayerWebSocketChannel | null;
     
     constructor(props: Props) {
         super(props);
@@ -56,28 +60,38 @@ export default class TradeTokens extends React.Component<Props, State> {
     }
 
     componentWillUnmount() {
-        this.props.relayerWebSocketClient.unwatchCurrentTokenPairOrderbook();
+        if (this.relayerWsChannel) {
+            this.relayerWsChannel.closeConnection();
+        }
     }
 
     fetchProxyTokenList = async () => {
         const tokens = await this.props.zeroEx.tokenRegistry.getTokensAsync();
     }
 
-    handleTradeActionChange = (e, { value }) => this.setState({ tradeAction: value });
-
-    handleTokenQuantityChange = (e, { value }) => this.setState({ tokenQuantity: value });
-
-    handleBaseTokenDropDownItemSelected = (e, data: DropdownProps) => {
-        const itemProp = _.find(data.options, {value: data.value}) as DropdownItemProps;
-        this.setState({ baseToken: itemProp.token });
+    handleTradeActionChange = async (e, { value }) => {
+        await this.setState({ tradeAction: value });
+        this.onPropertyChanged();
     }
 
-    handleQuoteTokenDropDownItemSelected = (e, data: DropdownProps) => {
-        const itemProp = _.find(data.options, {value: data.value}) as DropdownItemProps;
-        this.setState({ quoteToken: itemProp.token });
+    handleTokenQuantityChange = async (e, { value }) => {
+        await this.setState({ tokenQuantity: value });
+        this.onPropertyChanged();
     }
 
-    onPropertyChanged = () => {
+    handleBaseTokenDropDownItemSelected = async (e, data: DropdownProps) => {
+        const itemProp = _.find(data.options, {value: data.value}) as DropdownItemProps;
+        await this.setState({ baseToken: itemProp.token });
+        this.onPropertyChanged();
+    }
+
+    handleQuoteTokenDropDownItemSelected = async (e, data: DropdownProps) => {
+        const itemProp = _.find(data.options, {value: data.value}) as DropdownItemProps;
+        await this.setState({ quoteToken: itemProp.token });
+        this.onPropertyChanged();
+    }
+
+    onPropertyChanged = async () => {
         const relayerWebSocketClient = this.props.relayerWebSocketClient;
         let baseToken = this.state.baseToken;
         let quoteToken = this.state.quoteToken;
@@ -86,9 +100,21 @@ export default class TradeTokens extends React.Component<Props, State> {
             baseToken = baseToken as Token;
             quoteToken = quoteToken as Token;
 
-            relayerWebSocketClient.watchTokenPairOrderbook(baseToken, quoteToken);
+            const tokenPair: TokenPair = {
+                base: baseToken,
+                quote: quoteToken
+            };
+
+            if (this.relayerWsChannel) {
+                await this.relayerWsChannel.initialiseConnection();
+                await this.relayerWsChannel.subscribe(tokenPair);
+            } 
         }
     }
+
+    onSubscribe = (snapshot: WebSocketMessage<OrderbookSnapshot>) => { }
+
+    onUpdate = (update: WebSocketMessage<OrderbookUpdate>) => { }
 
     render() {
         const zeroExProxyTokens: Token[] = this.props.zeroExProxyTokens;
@@ -155,6 +181,11 @@ export default class TradeTokens extends React.Component<Props, State> {
 
         return (
             <Form style={{ height: '100%' }}>
+                <RelayerWebSocketChannel
+                    ref={ref => (this.relayerWsChannel = ref)} 
+                    onSnapshot={this.onSubscribe}
+                    onUpdate={this.onUpdate}
+                />
                 <Form.Group inline style={{display: 'flex', justifyContent: 'center'}}>
                     <label>I would like to:</label>
                     <Form.Radio

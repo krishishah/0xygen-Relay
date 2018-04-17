@@ -69,7 +69,7 @@ export class WebSocketHandler {
                     this.closeWebSocketConnection(connectionMetadata);
                 }
             }
-        }, 20000);
+        }, 1000);
 
         socketConnection.on('message', message => 
             this.onMessageFromClientSocket(message, connectionMetadata));

@@ -71,7 +71,7 @@ export class SimpleOrderbookChannelHandler implements OrderbookChannelHandler  {
     }
 
     public getRate() {
-        
+
     }
 
     // tslint:disable-next-line:prefer-function-over-method

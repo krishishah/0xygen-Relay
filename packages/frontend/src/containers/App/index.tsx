@@ -19,7 +19,7 @@ import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import SetAllowances from '../Steps/SetAllowances';
 import TradeTokens from '../Steps/TradeTokens';
 import { KOVAN_RPC, KOVAN_NETWORK_ID, ETHER_DECIMAL_PLACES, RELAYER_URL } from 'src';
-import { RelayerWebSocketClient } from 'src/api/webSocket/relayerWebSocketClient';
+import { RelayerWebSocketClient } from '../../api/webSocket/relayerWebSocketClient';
 const Web3ProviderEngine = require('web3-provider-engine');
 
 export interface TokenBalance {

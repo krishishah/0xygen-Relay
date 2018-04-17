@@ -62,7 +62,7 @@ export default class SetAllowances extends React.Component<Props, State> {
         if (!tokensWithAllowances[zeroExRegistryToken.symbol]) {
             const newTokenAllowace = await this.props.fetchTokenAllowance(zeroExRegistryToken);
 
-            if(newTokenAllowace.allowance.gt(0)) {
+            if (newTokenAllowace.allowance.gt(0)) {
                 //Temporary
                 this.props.fetchAllowances();
             } else {
