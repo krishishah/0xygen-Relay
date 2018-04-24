@@ -96,10 +96,10 @@ export default class App extends React.Component<Props, State> {
             // Add metamask subprovider to engine if it exists
             this.providerEngine = new Web3ProviderEngine();
             this.providerEngine.addProvider(new InjectedWeb3Subprovider((window as any).web3.currentProvider));
-            this.providerEngine.addProvider(new RedundantRPCSubprovider([TEST_RPC]));
+            this.providerEngine.addProvider(new RedundantRPCSubprovider([KOVAN_RPC]));
             this.providerEngine.start();
             this.web3Wrapper = new Web3Wrapper(this.providerEngine);
-            this.zeroEx = new ZeroEx(this.providerEngine, { networkId: TEST_RPC_NETWORK_ID });
+            this.zeroEx = new ZeroEx(this.providerEngine, { networkId: KOVAN_NETWORK_ID });
             this.web3 = new Web3(this.providerEngine);
 
             setInterval(() => {
