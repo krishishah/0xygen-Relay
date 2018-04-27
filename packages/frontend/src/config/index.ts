@@ -2,7 +2,7 @@
 // Please ensure you have Metamask installed
 // and it is connected to the Kovan test network
 export const KOVAN_NETWORK_ID = 42;
-export const KOVAN_RPC = 'https://kovan.infura.io';
+export const KOVAN_RPC = 'https://kovan.infura.io/WJFq23sRIxeu7Snltrjq';
 
 export const TEST_RPC_NETWORK_ID = 50;
 export const TEST_RPC = 'http://localhost:8545';

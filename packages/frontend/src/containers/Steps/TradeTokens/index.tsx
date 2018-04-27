@@ -8,6 +8,11 @@ import { TokenAllowance } from '../../App';
 import * as _ from 'lodash';
 import { RelayerWebSocketChannel } from '../../../api/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
+import { SerializerUtils } from '../../../utils';
+import { SignedOrder } from '@0xproject/types';
+import { BigNumber } from 'bignumber.js';
+import * as Web3 from 'web3';
+import { TransactionMessageStatus } from 'src/components/TransactionMessage';
 import { 
     TokenPair, 
     WebSocketMessage, 
@@ -30,12 +35,9 @@ import {
     Statistic, 
     Icon, 
     Divider, 
-    Label
+    Label,
+    ButtonProps
 } from 'semantic-ui-react';
-import { SerializerUtils } from '../../../utils';
-import { SignedOrder } from '@0xproject/types';
-import { BigNumber } from 'bignumber.js';
-import * as Web3 from 'web3';
 
 export type TradeAction = 'Buy' | 'Sell';
 
@@ -43,7 +45,8 @@ interface Props {
     zeroEx: ZeroEx;
     tokensWithAllowance: Dictionary<TokenAllowance>;
     zeroExProxyTokens: Token[];
-    web3: Web3;
+    accounts: string[];
+    setTransactionMessageState: (status: TransactionMessageStatus, message?: string) => void;
 }
 
 interface State {
@@ -156,18 +159,6 @@ export default class TradeTokens extends React.Component<Props, State> {
         const baseToken = this.state.baseToken as Token;
         const quoteToken = this.state.quoteToken as Token;
 
-        tokenPairOrderbook.asks.map(order => {
-            order.makerTokenAmount = ZeroEx.toUnitAmount(
-                new BigNumber(order.makerTokenAmount),
-                baseToken.decimals
-            );
-
-            order.takerTokenAmount = ZeroEx.toUnitAmount(
-                new BigNumber(order.takerTokenAmount),
-                quoteToken.decimals
-            );
-        });
-
         await this.setState({
             orderbook: tokenPairOrderbook
         });
@@ -213,11 +204,13 @@ export default class TradeTokens extends React.Component<Props, State> {
         this.setState({
             orderbook: orderbook
         });
+
+        await this.calculateRateRange();
     }
 
     calculateRateRange = async () => {
-        const baseToken = this.state.baseToken;
-        const quoteToken = this.state.quoteToken;
+        let baseToken = this.state.baseToken;
+        let quoteToken = this.state.quoteToken;
         const tradeAction = this.state.tradeAction;
         const tokenQuantity = this.state.tokenQuantity;
         const orderbook = this.state.orderbook;
@@ -226,8 +219,16 @@ export default class TradeTokens extends React.Component<Props, State> {
         let maxExchangeRate;
 
         // (Ask, Buy) - Taker buys base token, Maker sells base token
-        if (tradeAction === 'Buy' && orderbook !== undefined) {
+        if (baseToken && 
+            quoteToken && 
+            tokenQuantity.greaterThan(0) &&
+            tradeAction === 'Buy' && 
+            orderbook !== undefined
+        ) {
             const asks: SignedOrder[] = orderbook.asks;
+
+            baseToken = this.state.baseToken as Token;
+            quoteToken = this.state.quoteToken as Token;
 
             let lowerBoundBaseTokenQuantity: BigNumber = new BigNumber(0);
             let lowerBoundQuoteTokenQuantity: BigNumber = new BigNumber(0);
@@ -244,14 +245,25 @@ export default class TradeTokens extends React.Component<Props, State> {
                 const order: SignedOrder = asks[i];
                 if (lowerBoundBaseTokenQuantity.lessThan(tokenQuantity)) {
                     console.log(`lower bound signed order: ${JSON.stringify(order)}`);
-                    let baseTokenQuantityToFill = tokenQuantity.minus(lowerBoundBaseTokenQuantity);
-                    let orderRate = order.takerTokenAmount.div(order.makerTokenAmount);
-                    
-                    baseTokenQuantityToFill = baseTokenQuantityToFill.lessThan(order.makerTokenAmount)
-                    ? lowerBoundBaseTokenQuantity.add(baseTokenQuantityToFill)
-                    : lowerBoundBaseTokenQuantity.add(order.makerTokenAmount);
 
-                    lowerBoundBaseTokenQuantity = lowerBoundBaseTokenQuantity.add(baseTokenQuantityToFill)
+                    const makerTokenAmount = ZeroEx.toUnitAmount(
+                        new BigNumber(order.makerTokenAmount),
+                        baseToken.decimals
+                    );
+        
+                    const takerTokenAmount = ZeroEx.toUnitAmount(
+                        new BigNumber(order.takerTokenAmount),
+                        quoteToken.decimals
+                    );
+
+                    let baseTokenQuantityToFill = tokenQuantity.minus(lowerBoundBaseTokenQuantity);
+                    let orderRate = takerTokenAmount.div(makerTokenAmount);
+                    
+                    baseTokenQuantityToFill = baseTokenQuantityToFill.lessThan(makerTokenAmount)
+                    ? lowerBoundBaseTokenQuantity.add(baseTokenQuantityToFill)
+                    : lowerBoundBaseTokenQuantity.add(makerTokenAmount);
+
+                    lowerBoundBaseTokenQuantity = lowerBoundBaseTokenQuantity.add(baseTokenQuantityToFill);
 
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     lowerBoundQuoteTokenQuantity = lowerBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
@@ -268,19 +280,32 @@ export default class TradeTokens extends React.Component<Props, State> {
             for (i; i >= 0; i--) {
                 const order: SignedOrder = asks[i];
                 if ((upperBoundBaseTokenQuantity.lessThan(tokenQuantity))) {
+                    
+                    const makerTokenAmount = ZeroEx.toUnitAmount(
+                        new BigNumber(order.makerTokenAmount),
+                        baseToken.decimals
+                    );
+        
+                    const takerTokenAmount = ZeroEx.toUnitAmount(
+                        new BigNumber(order.takerTokenAmount),
+                        quoteToken.decimals
+                    );
+
                     console.log(`upper bound signed order: ${JSON.stringify(order)}`);
                     let baseTokenQuantityToFill = tokenQuantity.minus(upperBoundBaseTokenQuantity);
-                    let orderRate = order.takerTokenAmount.div(order.makerTokenAmount);
+                    let orderRate = takerTokenAmount.div(makerTokenAmount);
                     
-                    baseTokenQuantityToFill = baseTokenQuantityToFill.lessThan(order.makerTokenAmount)
+                    baseTokenQuantityToFill = baseTokenQuantityToFill.lessThan(makerTokenAmount)
                     ? upperBoundBaseTokenQuantity.add(baseTokenQuantityToFill)
-                    : upperBoundBaseTokenQuantity.add(order.makerTokenAmount);
+                    : upperBoundBaseTokenQuantity.add(makerTokenAmount);
 
-                    upperBoundBaseTokenQuantity = upperBoundBaseTokenQuantity.add(baseTokenQuantityToFill)
+                    upperBoundBaseTokenQuantity = upperBoundBaseTokenQuantity.add(baseTokenQuantityToFill);
 
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     upperBoundQuoteTokenQuantity = upperBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
                     this.ordersToFill.push(order);
+                } else {
+                    break;
                 }
             }
 
@@ -291,11 +316,37 @@ export default class TradeTokens extends React.Component<Props, State> {
         }
     }
 
-    executeTrade = async () => {
-        const fillQuantity = this.state.tokenQuantity;
-        const takerAddress = this.props.web3.eth.accounts[0];
-        if (this.ordersToFill.length > 0) {
-            this.props.zeroEx.exchange.fillOrdersUpToAsync(this.ordersToFill, fillQuantity, false, takerAddress); 
+    onClickTrade = async (event: React.MouseEvent<HTMLButtonElement>, data: ButtonProps) => {
+        const takerAddress = this.props.accounts[0];
+        const baseToken = this.state.baseToken as Token;
+        const quoteToken = this.state.quoteToken as Token;
+        const handleTxMsg = this.props.setTransactionMessageState;
+        
+        const fillQuantity = ZeroEx.toBaseUnitAmount(
+            this.state.tokenQuantity,
+            baseToken.decimals
+        );
+
+        if (this.ordersToFill.length > 0 
+            && baseToken 
+            && quoteToken 
+            && fillQuantity.greaterThan(0)
+        ) {
+            handleTxMsg('LOADING');
+
+            console.log('hash:' + ZeroEx.getOrderHashHex(this.ordersToFill[0]));
+            console.log('signed orders to fill:' + JSON.stringify(this.ordersToFill));
+            try {
+                const txMsg = await this.props.zeroEx.exchange.fillOrderAsync(
+                    this.ordersToFill[0], 
+                    fillQuantity, 
+                    true, 
+                    takerAddress
+                );
+                handleTxMsg('SUCCESS', txMsg);
+            } catch (error) {
+                handleTxMsg('FAILURE', error.message);
+            }
         }
     }
 
@@ -340,14 +391,14 @@ export default class TradeTokens extends React.Component<Props, State> {
                 <Segment>
                     <Grid rows={3} textAlign="center" style={{margin: '1em 1em 1em 1em'}}>
                         <Grid.Row>
-                            <Statistic size='small'>
+                            <Statistic size="small">
                                 <Statistic.Value>{lowerBoundTokenQuantity} - {upperBoundTokenQuantity}</Statistic.Value>
                                 <Statistic.Label>{q.symbol}</Statistic.Label>
                             </Statistic>
                         </Grid.Row>
                         <Grid.Row><h3>AT</h3></Grid.Row>
                         <Grid.Row>
-                            <Statistic size='small'>
+                            <Statistic size="small">
                                 <Statistic.Value>{lowerBoundExchangeRate} - {upperBoundExchangeRate}</Statistic.Value>
                                 <Statistic.Label>{b.symbol}/{q.symbol}</Statistic.Label>
                             </Statistic>
@@ -358,7 +409,7 @@ export default class TradeTokens extends React.Component<Props, State> {
         } else {
             tokenStatistics = ( 
                 <Segment textAlign="center">
-                    <Statistic size='small'>
+                    <Statistic size="small">
                         <Statistic.Value>0</Statistic.Value>
                         <Statistic.Label>{quoteToken ? quoteToken.symbol : 'WETH'}</Statistic.Label>
                     </Statistic>
@@ -422,7 +473,7 @@ export default class TradeTokens extends React.Component<Props, State> {
                     />
                 </div>
                 <div style={{margin: '1em', display: 'flex', justifyContent: 'center'}}>
-                    <Form.Button>
+                    <Form.Button onClick={this.onClickTrade}>
                         Trade
                     </Form.Button>
                 </div>

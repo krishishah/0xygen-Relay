@@ -2,30 +2,33 @@ import { Repository, EntityRepository, Connection } from 'typeorm';
 import { SignedOrderEntity } from '../entities/signedOrderEntity';
 import { SignedOrder } from '0x.js';
 import { BigNumber } from 'bignumber.js';
-import { ECSignature } from '0x.js/lib/src/types';
+import { ECSignature } from '@0xproject/types';
 import { Service } from 'typedi';
 import { OrmConnection, OrmRepository } from 'typeorm-typedi-extensions';
 import { signedOrderCompare } from '../utils/signedOrderCompare';
+import { EventPubSub } from '../services/eventPubSub';
 
 @Service()
 @EntityRepository(SignedOrderEntity)
 export class SignedOrderRepository extends Repository<SignedOrderEntity> {
 
-    public addSignedOrder(signedOrder: SignedOrder, orderHashHex: string): void {
-        this.insert(this.toSignedOrderEntity(signedOrder, orderHashHex));
+    public async addOrUpdateOrder(signedOrder: SignedOrder, orderHashHex: string): Promise<SignedOrder> {
+        const entity = this.toSignedOrderEntity(signedOrder, orderHashHex);
+        return this.save(entity).then(_ => signedOrder);
     }
 
     public getSignedOrder(orderHashHex: string): Promise<SignedOrder> {
         return this.findOne({orderHashHex: orderHashHex})
             .then(signedOrderEntity => {
-                if (signedOrderEntity === undefined) {
+                if (!signedOrderEntity) {
                     throw Error;
                 }
                 return this.toSignedOrder(signedOrderEntity);
             })
             .catch(error => {
                 throw error;
-            });
+            }
+        );
     }
 
     public getTokenPairOrders(makerTokenAddress: string, takerTokenAddress: string): Promise<SignedOrder[]> {
@@ -35,9 +38,35 @@ export class SignedOrderRepository extends Repository<SignedOrderEntity> {
                 takerTokenAddress: takerTokenAddress
             }
         )
-        .then(signedOrders => {
-            return signedOrders.map(signedOrder => this.toSignedOrder(signedOrder)).sort(signedOrderCompare);
+        .then(signedOrderEntities => {
+            return signedOrderEntities
+                .map(
+                    signedOrder => this.toSignedOrder(signedOrder)
+                ).sort(
+                    signedOrderCompare
+                );
+            }
+        );
+    }
+
+    public getAllSignedOrders(): Promise<SignedOrder[]> {
+        return this.find({}).then(signedOrderEntities => {
+            return signedOrderEntities.map(signedOrder => this.toSignedOrder(signedOrder)).sort(signedOrderCompare);
         });
+    }
+
+    public removeSignedOrder(signedOrder: SignedOrder, orderHashHex: string): Promise<SignedOrder> {
+        return this.remove(
+            this.toSignedOrderEntity(
+                signedOrder, 
+                orderHashHex
+            )
+        )
+        .then(entity => this.toSignedOrder(entity));
+    }
+
+    public removeSignedOrderByHashHex(orderHashHex: string): Promise<void> {
+        return this.delete({ orderHashHex: orderHashHex });
     }
 
     private toSignedOrderEntity(signedOrder: SignedOrder, orderHashHex: string): SignedOrderEntity {

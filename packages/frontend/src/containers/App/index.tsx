@@ -7,6 +7,17 @@ import { Dashboard } from '../../components/Dashboard';
 import InstallMetamask from '../../components/InstallMetamask';
 import * as Web3 from 'web3';
 import * as RPCSubprovider from 'web3-provider-engine/subproviders/rpc';
+import * as _ from 'lodash';
+import { BigNumber } from 'bignumber.js';
+import { Dictionary } from 'lodash';
+import { Web3Wrapper } from '@0xproject/web3-wrapper';
+import SetAllowances from '../Steps/SetAllowances';
+import TradeTokens from '../Steps/TradeTokens';
+import { 
+    TransactionMessage, 
+    TransactionMessageProps,
+    TransactionMessageStatus
+} from '../../components/TransactionMessage';
 import { 
     Divider, 
     Container, 
@@ -15,7 +26,9 @@ import {
     Step, 
     Icon, 
     Grid, 
-    DropdownItemProps 
+    DropdownItemProps, 
+    Message,
+    GridColumn
 } from 'semantic-ui-react';
 import { 
     InjectedWeb3Subprovider, 
@@ -25,17 +38,10 @@ import {
     SimpleTradeStepsHeader, 
     SimpleTradeStep 
 } from '../../components/SimpleTradeSteps';
-import GridColumn from 'semantic-ui-react/dist/commonjs/collections/Grid/GridColumn';
 import { 
     ZeroEx, 
     Token 
 } from '0x.js';
-import * as _ from 'lodash';
-import { BigNumber } from 'bignumber.js';
-import { Dictionary } from 'lodash';
-import { Web3Wrapper } from '@0xproject/web3-wrapper';
-import SetAllowances from '../Steps/SetAllowances';
-import TradeTokens from '../Steps/TradeTokens';
 import { 
     KOVAN_RPC, 
     KOVAN_NETWORK_ID, 
@@ -66,10 +72,11 @@ interface State {
     activeStep: SimpleTradeStep;
     tokensWithAllowances: Dictionary<TokenAllowance>;
     zeroExRegistryTokens: Token[];
+    transactionMessage: TransactionMessageProps;
 }
 
 export default class App extends React.Component<Props, State> {
-    web3: Web3;
+
     providerEngine: any;
     zeroEx: ZeroEx;
     web3Wrapper: Web3Wrapper;
@@ -83,7 +90,12 @@ export default class App extends React.Component<Props, State> {
             etherBalance: new BigNumber(0),
             activeStep: 'Allowance',
             tokensWithAllowances: {},
-            zeroExRegistryTokens: []
+            zeroExRegistryTokens: [],
+            transactionMessage: {
+                message: '',
+                status: 'NONE',
+                dismissMessage: this.dismissTransactionMessage
+            }
         };
     }
 
@@ -100,7 +112,6 @@ export default class App extends React.Component<Props, State> {
             this.providerEngine.start();
             this.web3Wrapper = new Web3Wrapper(this.providerEngine);
             this.zeroEx = new ZeroEx(this.providerEngine, { networkId: KOVAN_NETWORK_ID });
-            this.web3 = new Web3(this.providerEngine);
 
             setInterval(() => {
                 this.fetchAccountDetailsAsync();
@@ -248,6 +259,26 @@ export default class App extends React.Component<Props, State> {
         });
     }
 
+    private dismissTransactionMessage = () => {
+        this.setState({
+            transactionMessage: {
+                message: '',
+                status: 'NONE',
+                dismissMessage: this.dismissTransactionMessage
+            }
+        });
+    }
+
+    private setTransactionMessageState = (status: TransactionMessageStatus, message?: string) => {
+        this.setState({
+            transactionMessage: {
+                message,
+                status,
+                dismissMessage: this.dismissTransactionMessage
+            }
+        });
+    }
+
     // tslint:disable-next-line:member-ordering
     render() {
         // Detect if Web3 is found, if not, ask the user to install Metamask
@@ -277,7 +308,8 @@ export default class App extends React.Component<Props, State> {
                             zeroEx={this.zeroEx}
                             tokensWithAllowance={this.state.tokensWithAllowances} 
                             zeroExProxyTokens={this.state.zeroExRegistryTokens}
-                            web3={this.web3}
+                            setTransactionMessageState={this.setTransactionMessageState}
+                            accounts={this.state.accounts}
                         />
                     );
                     break;
@@ -293,7 +325,12 @@ export default class App extends React.Component<Props, State> {
                         raised={true} 
                         centered={true} 
                         style={{ padding: '1em 1em 1em 1em', margin: '4em 4em 4em 4em', minWidth: '1000px'}}
-                    >
+                    >  
+                        <TransactionMessage 
+                            status={this.state.transactionMessage.status} 
+                            message={this.state.transactionMessage.message} 
+                            dismissMessage={this.state.transactionMessage.dismissMessage}
+                        />
                         <Card.Content>
                             <Card.Header>
                                 <SimpleTradeStepsHeader 

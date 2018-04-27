@@ -33,21 +33,20 @@ export class V0RestApiRouter {
     /**
      * GET orderbook.
      */
-    public getOrderBook(req: Request, res: Response, next: NextFunction) {
+    public getOrderbook(req: Request, res: Response, next: NextFunction) {
         const baseTokenAddress: string = req.query.baseTokenAddress;
         const quoteTokenAddress: string = req.query.quoteTokenAddress;
-        this.restService.getOrderBook(baseTokenAddress, quoteTokenAddress)
+        this.restService.getOrderbook(baseTokenAddress, quoteTokenAddress)
             .then(orderBook => {
-                res.setHeader('Content-Type', 'application/json');
-                res.json(SerializerUtils.TokenPairOrderbooktoJSON(orderBook));
-                res.send();
+                res.status(201).json(SerializerUtils.TokenPairOrderbooktoJSON(orderBook));
             })
             .catch(error => {
                 // TODO: Sort out error handling
                 res.status(404).send({
                     error: error.statusMessage
                 });
-            });
+            }
+        );
     }
 
     /**
@@ -67,16 +66,16 @@ export class V0RestApiRouter {
             .getOrder(orderHashHex)
             .then(
                 order => {
-                    res.setHeader('Content-Type', 'application/json');
-                    res.json(SerializerUtils.SignedOrdertoJSON(order));
-                    res.status(201).send();
-                })
+                    res.status(201).json(SerializerUtils.SignedOrdertoJSON(order));
+                }
+            )
             .catch(
                 error => {
                     res.status(404).send({
                         error: error.statusMessage
                     });
-                });
+                }
+            );
     }
 
     /**
@@ -99,9 +98,13 @@ export class V0RestApiRouter {
         const { body } = req;
         const signedOrderSchema = body as SignedOrderSchema;
         const signedOrder = SerializerUtils.SignedOrderfromJSON(signedOrderSchema);
-        this.restService.postOrder(signedOrder);
-        res.statusMessage = 'Success';
-        res.status(201).send({});
+        this.restService
+            .postOrder(signedOrder)
+            .then((value: void) => {
+                res.statusMessage = 'Success';
+                res.status(201).send({});
+            });
+
     }
 
     /**
@@ -110,7 +113,7 @@ export class V0RestApiRouter {
      */
     private init() {
         this.router.get('/token_pairs', this.getTokenPairs.bind(this));
-        this.router.get('/orderbook', this.getOrderBook.bind(this));
+        this.router.get('/orderbook', this.getOrderbook.bind(this));
         this.router.get('/orders', this.getOrders.bind(this));
         this.router.get('/order/:orderHash', this.getOrder.bind(this));
         this.router.post('/fees', this.postFees.bind(this));

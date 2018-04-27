@@ -13,7 +13,9 @@ import {
     OrderAdded, 
     OrderUpdated, 
     ORDER_UPDATED, 
-    ORDER_ADDED 
+    ORDER_ADDED, 
+    ORDER_REMOVED,
+    OrderRemoved
 } from '../types/events';
 import { 
     WebSocketMessage, 
@@ -107,7 +109,7 @@ export class WebSocketHandler {
                 connectionMetadata.subscriptions.push(`${baseTokenAddress}-${quoteTokenAddress}`);
     
                 if (snapshotNeeded && socketConnection !== undefined) {
-                    this.restService.getOrderBook(
+                    this.restService.getOrderbook(
                         baseTokenAddress, 
                         quoteTokenAddress
                     ).then(
@@ -126,21 +128,32 @@ export class WebSocketHandler {
         }
     }
 
-    // TODO: Implement special logic for Order fills and cancellations
-    private handleOrderbookUpdate(data: OrderEvent<OrderAdded | OrderUpdated>) { 
-        const { baseTokenAddress, quoteTokenAddress } = data.payload;
-        const subscriptionChannel = `${baseTokenAddress}-${quoteTokenAddress}`;
+    private handleOrderbookUpdate(data: OrderEvent<OrderAdded | OrderUpdated | OrderRemoved>) { 
+        const { makerTokenAddress, takerTokenAddress } = data.payload;
+        const subChannels = [
+                             `${makerTokenAddress}-${takerTokenAddress}`, 
+                             `${takerTokenAddress}-${makerTokenAddress}`
+                            ];
         
+        console.log(`Received OrderEvent of type: ${data.type} with data:\n${JSON.stringify(data)}`);
+
         this.connectionMetadataSet.forEach(activeConnection => {
-            if (activeConnection.subscriptions.find(sub => sub === subscriptionChannel)) {
-                const requestId = activeConnection.subscriptionIdMap.get(subscriptionChannel) || 0;
-                const message: WebSocketMessage<OrderbookUpdate> = {
+            if (activeConnection.subscriptions.find(sub => sub === subChannels[0] || sub === subChannels[1])) {
+                
+                const requestId = activeConnection.subscriptionIdMap.get(subChannels[0]) 
+                                  || activeConnection.subscriptionIdMap.get(subChannels[1])
+                                  || 0;
+
+                // ORDER_ADDED, ORDER_UPDATED & ORDER_DELETED all result in Update WS Messages
+                // being sent according to the 0x protocol.
+                const orderAddedMessage: WebSocketMessage<OrderbookUpdate> = {
                     type: 'update',
                     channel: 'orderbook',
                     requestId,
                     payload: SerializerUtils.SignedOrdertoJSON(data.payload.order),
                 };
-                activeConnection.socketConnection.sendUTF(message);
+                
+                activeConnection.socketConnection.sendUTF(orderAddedMessage);
             }
         });
     }
@@ -152,5 +165,6 @@ export class WebSocketHandler {
     private init() {
         this.pubSubClient.subscribe(ORDER_UPDATED, this.handleOrderbookUpdate.bind(this));
         this.pubSubClient.subscribe(ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(ORDER_REMOVED, this.handleOrderbookUpdate.bind(this));
     }
 }

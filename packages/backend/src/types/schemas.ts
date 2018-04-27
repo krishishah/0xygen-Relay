@@ -1,4 +1,4 @@
-import { ECSignature } from '0x.js/lib/src/types';
+import { ECSignature } from '@0xproject/types';
 
 type Address = string;
 

@@ -1,21 +1,26 @@
 import { ZeroEx, ZeroExConfig } from '0x.js';
-import { Web3ProviderEngine } from 'web3-provider-engine';
 import { isNullOrUndefined } from 'util';
+import * as Web3 from 'web3';
+import { Provider } from '@0xproject/types';
+import { KOVAN_NETWORK_ID, KOVAN_RPC } from '../index';
+import { Service } from 'typedi';
 
+@Service()
 export class ZeroExClient {
 
-    private static zeroEx: ZeroEx;
+    static zeroEx: ZeroEx;
 
-    public static getInstance(): ZeroEx {
-        return this.zeroEx;
-    }
+    constructor() {
+        const zeroExConfig: ZeroExConfig = {
+            networkId: KOVAN_NETWORK_ID,
+        };
+        
+        const provider = new Web3.providers.HttpProvider(KOVAN_RPC);
 
-    public static createInstance(web3providerEngine: Web3ProviderEngine, zeroExConfig: ZeroExConfig): ZeroEx {
-        if (isNullOrUndefined(this.zeroEx)) {
-            this.zeroEx = new ZeroEx(web3providerEngine, zeroExConfig);
+        if (isNullOrUndefined(ZeroExClient.zeroEx)) {
+            ZeroExClient.zeroEx = new ZeroEx(provider, zeroExConfig);
+
         }
-        return this.zeroEx;
     }
 
-    private constructor() { }
 }

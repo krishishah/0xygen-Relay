@@ -1,4 +1,4 @@
-import { SignedOrder } from '0x.js/lib/src/types';
+import { SignedOrder } from '@0xproject/types';
 
 // This compare function assumes MAKER/TAKER token pair
 export function signedOrderCompare(x: SignedOrder, y: SignedOrder): number {

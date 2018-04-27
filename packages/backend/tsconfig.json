@@ -2,8 +2,11 @@
   "compilerOptions": {
     "lib": [
        "es5",
-       "es6"
+       "es6",
+       "dom", 
+       "es2017"
     ],
+    "typeRoots": ["node_modules/@0xproject/typescript-typings/types", "node_modules/@types"],
     "target": "es5",
     "module": "commonjs",
     "moduleResolution": "node",
@@ -13,7 +16,9 @@
     "sourceMap": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "./node_modules/web3-typescript-typings/index.d.ts",
+    "./node_modules/ethers-typescript-typings/index.d.ts"
   ],
   "exclude": [
     "node_modules"

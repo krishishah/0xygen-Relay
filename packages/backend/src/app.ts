@@ -3,7 +3,6 @@ import * as express from 'express';
 import * as logger from 'morgan';
 import * as bodyParser from 'body-parser';
 import * as Web3 from 'web3';
-import { Web3ProviderEngine, InjectedWeb3Subprovider, RedundantRPCSubprovider } from 'web3-provider-engine';
 import { V0RestApiRouter } from './routes/rest';
 import { ZeroEx, ZeroExConfig } from '0x.js';
 import { Service } from 'typedi';
@@ -17,8 +16,6 @@ import { WebSocketHandler } from './routes/webSocket';
 @Service()
 export class App {
 
-    KOVAN_NETWORK_ID: number = 42;
-
     // ref to Express instance
     public express: express.Application;
 
@@ -31,28 +28,6 @@ export class App {
         this.wsServer = this.initialiseWebSocketServer();
         this.middleware();
         this.routes();
-    }
-
-    // Configer Web3 engine.
-    public web3providerEngine: Web3ProviderEngine = () => {
-        // Create a Web3 Provider Engine
-        const engine = new Web3ProviderEngine();
-        // Compose our Providers, order matters - use the RedundantRPCSubprovider to route all other requests
-        engine.addProvider(new RedundantRPCSubprovider(['http://localhost:8545', 'https://kovan.infura.io/']));
-        engine.start();
-
-        console.log('Connected to Web3 Provider Engine');
-
-        return engine;
-    }
-
-    // Set up ZeroEx instance
-    public zeroEx = () => {
-        const zeroExConfig: ZeroExConfig = {
-            networkId: 50, // testrpc
-        };
-        // Instantiate 0x.js instance
-        return ZeroExClient.createInstance(Web3ProviderEngine, zeroExConfig);
     }
 
     private initialiseWebSocketServer(): WebSocketServer {

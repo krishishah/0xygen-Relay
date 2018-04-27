@@ -1,7 +1,5 @@
 import * as mocha from 'mocha';
 import * as chai from 'chai';
-import { create } from 'domain';
-import { error } from 'util';
 import { EventPubSub } from '../src/services/eventPubSub';
 
 const expect = chai.expect;

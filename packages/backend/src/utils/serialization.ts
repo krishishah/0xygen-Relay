@@ -1,4 +1,4 @@
-import { SignedOrder } from '0x.js/lib/src/types';
+import { SignedOrder } from '@0xproject/types';
 import { BigNumber } from 'bignumber.js';
 import { ECSignature } from '0x.js';
 import { SignedOrderSchema, TokenPairOrderbookSchema } from '../types/schemas';

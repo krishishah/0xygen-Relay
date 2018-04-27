@@ -10,10 +10,26 @@ import { Application } from 'express';
 import * as express from 'express';
 import { ServerClient } from './utils/serverClient';
 import { server as WebSocketServer, request as WebSocketRequest } from 'websocket';
+import { OrderStateWatcherConfig } from '0x.js/lib/src/types';
+import { BlockParamLiteral } from '0x.js';
 
 const host: string = process.env.HOST || 'localhost';
 const httpPort: number = normalizePort(process.env.PORT || 3000) as number;
 const wsPort: number = normalizePort(process.env.WSPORT || 3001) as number;
+
+export const KOVAN_NETWORK_ID: number = 42;
+export const KOVAN_RPC: string = 'https://kovan.infura.io/WJFq23sRIxeu7Snltrjq';
+
+export const TEST_RPC_NETWORK_ID: number = 50;
+export const TEST_RPC: string = 'http://localhost:8545';
+
+export const orderStateWatcherConfig: OrderStateWatcherConfig = {
+    orderExpirationCheckingIntervalMs: 200,
+    eventPollingIntervalMs: 200,
+    expirationMarginMs: 100,
+    cleanupJobIntervalMs: 100000,
+    stateLayer: BlockParamLiteral.Latest
+};
 
 async function createServer(): Promise<Express.Application> {
     debug('ts-express:server');
