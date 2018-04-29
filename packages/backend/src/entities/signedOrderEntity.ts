@@ -51,4 +51,10 @@ export class SignedOrderEntity {
     @Column()
     expirationUnixTimestampSec: string;
 
+    @Column()
+    remainingMakerTokenAmount: string;
+
+    @Column()
+    remainingTakerTokenAmount: string;
+    
 }

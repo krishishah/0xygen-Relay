@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { BigNumber } from '@0xproject/utils/lib/configured_bignumber';
 import { Service, Container } from 'typedi';
-import { RestService } from '../services/restService';
+import { OrderService } from '../services/orderService';
 import { SignedOrder } from '0x.js';
 import { SerializerUtils } from '../utils/serialization';
 import { SignedOrderSchema } from '../types/schemas';
@@ -16,7 +16,7 @@ export class V0RestApiRouter {
     /**
      * Initialize the RestApiRouter
      */
-    constructor(private restService: RestService, private wsHandler: WebSocketHandler) {
+    constructor(private orderService: OrderService, private wsHandler: WebSocketHandler) {
         this.router = Router();
         this.init();
     }
@@ -36,7 +36,7 @@ export class V0RestApiRouter {
     public getOrderbook(req: Request, res: Response, next: NextFunction) {
         const baseTokenAddress: string = req.query.baseTokenAddress;
         const quoteTokenAddress: string = req.query.quoteTokenAddress;
-        this.restService.getOrderbook(baseTokenAddress, quoteTokenAddress)
+        this.orderService.getOrderbook(baseTokenAddress, quoteTokenAddress)
             .then(orderBook => {
                 res.status(201).json(SerializerUtils.TokenPairOrderbooktoJSON(orderBook));
             })
@@ -62,15 +62,13 @@ export class V0RestApiRouter {
      */
     public getOrder(req: Request, res: Response, next: NextFunction) {
         const orderHashHex: string = req.params.orderHash;
-        this.restService
+        this.orderService
             .getOrder(orderHashHex)
-            .then(
-                order => {
+            .then(order => {
                     res.status(201).json(SerializerUtils.SignedOrdertoJSON(order));
                 }
             )
-            .catch(
-                error => {
+            .catch(error => {
                     res.status(404).send({
                         error: error.statusMessage
                     });
@@ -98,12 +96,17 @@ export class V0RestApiRouter {
         const { body } = req;
         const signedOrderSchema = body as SignedOrderSchema;
         const signedOrder = SerializerUtils.SignedOrderfromJSON(signedOrderSchema);
-        this.restService
+        this.orderService
             .postOrder(signedOrder)
             .then((value: void) => {
                 res.statusMessage = 'Success';
                 res.status(201).send({});
-            });
+            })
+            .catch(e => {
+                res.statusMessage = `Invalid Order Error: ${e.message}`;
+                res.status(101).send({});
+            }
+        );
 
     }
 

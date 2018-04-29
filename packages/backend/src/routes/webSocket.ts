@@ -1,6 +1,6 @@
 import * as http from 'http';
 import { Service } from 'typedi';
-import { RestService } from '../services/restService';
+import { OrderService } from '../services/orderService';
 import { SerializerUtils } from '../utils/serialization';
 import { EventPubSub } from '../services/eventPubSub';
 import {
@@ -43,7 +43,7 @@ export class WebSocketHandler {
      * Initialize the Web Socket Handler
      */
     constructor( 
-        private restService: RestService, 
+        private orderService: OrderService, 
         private pubSubClient: EventPubSub
     ) {
         this.connectionMetadataSet = new Set();
@@ -109,7 +109,7 @@ export class WebSocketHandler {
                 connectionMetadata.subscriptions.push(`${baseTokenAddress}-${quoteTokenAddress}`);
     
                 if (snapshotNeeded && socketConnection !== undefined) {
-                    this.restService.getOrderbook(
+                    this.orderService.getOrderbook(
                         baseTokenAddress, 
                         quoteTokenAddress
                     ).then(

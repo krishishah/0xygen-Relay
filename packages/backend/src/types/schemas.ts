@@ -1,4 +1,5 @@
-import { ECSignature } from '@0xproject/types';
+import { ECSignature, SignedOrder } from '@0xproject/types';
+import { BigNumber } from '@0xproject/utils/lib/configured_bignumber';
 
 type Address = string;
 
@@ -40,3 +41,9 @@ export interface Subscribe {
 }
 
 export type OrderbookSnapshot = TokenPairOrderbookSchema;
+
+export interface EnrichedSignedOrder {
+    signedOrder: SignedOrder;
+    remainingMakerTokenAmount: BigNumber;
+    remainingTakerTokenAmount: BigNumber;
+}

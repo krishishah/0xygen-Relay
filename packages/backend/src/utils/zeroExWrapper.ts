@@ -6,7 +6,7 @@ import { KOVAN_NETWORK_ID, KOVAN_RPC } from '../index';
 import { Service } from 'typedi';
 
 @Service()
-export class ZeroExClient {
+export class ZeroExWrapper {
 
     static zeroEx: ZeroEx;
 
@@ -17,8 +17,8 @@ export class ZeroExClient {
         
         const provider = new Web3.providers.HttpProvider(KOVAN_RPC);
 
-        if (isNullOrUndefined(ZeroExClient.zeroEx)) {
-            ZeroExClient.zeroEx = new ZeroEx(provider, zeroExConfig);
+        if (isNullOrUndefined(ZeroExWrapper.zeroEx)) {
+            ZeroExWrapper.zeroEx = new ZeroEx(provider, zeroExConfig);
 
         }
     }

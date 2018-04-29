@@ -7,7 +7,6 @@ import { V0RestApiRouter } from './routes/rest';
 import { ZeroEx, ZeroExConfig } from '0x.js';
 import { Service } from 'typedi';
 import { Container } from 'typedi/Container';
-import { ZeroExClient } from './utils/zeroExClient';
 import { server as WebSocketServer } from 'websocket';
 import * as http from 'http';
 import { WebSocketHandler } from './routes/webSocket';

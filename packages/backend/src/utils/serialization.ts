@@ -1,7 +1,7 @@
 import { SignedOrder } from '@0xproject/types';
 import { BigNumber } from 'bignumber.js';
 import { ECSignature } from '0x.js';
-import { SignedOrderSchema, TokenPairOrderbookSchema } from '../types/schemas';
+import { SignedOrderSchema, TokenPairOrderbookSchema, EnrichedSignedOrder } from '../types/schemas';
 import { TokenPairOrderbook } from '../types/tokenPairOrderBook';
 
 export class SerializerUtils {
