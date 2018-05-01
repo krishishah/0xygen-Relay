@@ -64,26 +64,6 @@ export class OrderService {
             return orderBook;
         });
     }
-
-    public getOrderbookUpdate(baseTokenAddress: string, quoteTokenAddress: string): Promise<TokenPairOrderbook> {
-        return Promise.all(
-            [
-                // Bids have quote as the makerTokenAddress and base as the takerTokenAddress
-                this.orderRepository.getEnrichedTokenPairOrders(quoteTokenAddress, baseTokenAddress),
-                
-                // Asks have base as the makerTokenAddress and quots as the takerTokenAddress
-                this.orderRepository.getEnrichedTokenPairOrders(baseTokenAddress, quoteTokenAddress) 
-            ]
-        )
-        .then(tokenPairs => {
-            const orderBook: TokenPairOrderbook = {
-                bids: tokenPairs[0].map(o => o.signedOrder),
-                asks: tokenPairs[1].map(o => o.signedOrder)
-            };
-
-            return orderBook;
-        });
-    }
   
     public getOrders() {
         return null;
@@ -150,6 +130,46 @@ export class OrderService {
         this.orderStateWatcher.removeOrder(orderHash);
     }
 
+    // TODO: Publish updates only to certain clients rather than all clients
+    public publishOrderbookUpdate(baseTokenAddress: string, quoteTokenAddress: string) {
+        return Promise.all(
+            [
+                // Bids have quote as the makerTokenAddress and base as the takerTokenAddress
+                this.orderRepository.getEnrichedTokenPairOrders(quoteTokenAddress, baseTokenAddress),
+                
+                // Asks have base as the makerTokenAddress and quots as the takerTokenAddress
+                this.orderRepository.getEnrichedTokenPairOrders(baseTokenAddress, quoteTokenAddress) 
+            ]
+        )
+        .then(tokenPairs => {
+            // bids & asks
+            tokenPairs.map(orders => orders.map(order => {
+                if (order.remainingTakerTokenAmount.lessThan(order.signedOrder.takerTokenAmount)) {
+                    const orderEvent: OrderEvent<OrderUpdated> = {
+                        type: ORDER_UPDATED,
+                        payload: {
+                            order: order.signedOrder,
+                            // TODO: Find better way of doing this
+                            orderState: {
+                                makerBalance: new BigNumber(NaN),
+                                makerProxyAllowance: new BigNumber(NaN),
+                                makerFeeBalance: new BigNumber(NaN),
+                                makerFeeProxyAllowance: new BigNumber(NaN),
+                                filledTakerTokenAmount: new BigNumber(NaN),
+                                cancelledTakerTokenAmount: new BigNumber(NaN),
+                                remainingFillableMakerTokenAmount: order.remainingMakerTokenAmount,
+                                remainingFillableTakerTokenAmount: order.remainingTakerTokenAmount
+                            },
+                            makerTokenAddress: order.signedOrder.makerTokenAddress,
+                            takerTokenAddress: order.signedOrder.takerTokenAddress
+                        }
+                    };
+                    this.pubSubClient.publish(ORDER_UPDATED, orderEvent);
+                }
+            }));
+        });
+    }
+
     private async watchOrderbook(): Promise<void> {
         this.orderRepository
             .getAllEnrichedSignedOrders()
@@ -179,7 +199,6 @@ export class OrderService {
             this.orderRepository
                 .getSignedOrder(orderState.orderHash)
                 .then(signedOrder => {
-                    
                     const enrichedSignedOrder: EnrichedSignedOrder = {
                         signedOrder,
                         remainingMakerTokenAmount: orderRelevantState.remainingFillableMakerTokenAmount,
@@ -257,21 +276,21 @@ export class OrderService {
             .exchange
             .getCancelledTakerAmountAsync(orderHashHex)
             .then((cancelledTakerAmount: BigNumber) => {
-                filledOrCancelledTakerAmount.add(cancelledTakerAmount);
+                filledOrCancelledTakerAmount = filledOrCancelledTakerAmount.add(cancelledTakerAmount);
                 return ZeroExWrapper.zeroEx.exchange.getFilledTakerAmountAsync(orderHashHex);
             })
             .then((filledTakerAmount: BigNumber) => {
-                filledOrCancelledTakerAmount.add(filledTakerAmount);
+                filledOrCancelledTakerAmount = filledOrCancelledTakerAmount.add(filledTakerAmount);
 
                 const rate = enrichedOrder.signedOrder.makerTokenAmount.div(
                     enrichedOrder.signedOrder.takerTokenAmount
                 );
                 
-                enrichedOrder.remainingTakerTokenAmount.minus(
+                enrichedOrder.remainingTakerTokenAmount = enrichedOrder.remainingTakerTokenAmount.minus(
                     filledOrCancelledTakerAmount
                 );
 
-                enrichedOrder.remainingMakerTokenAmount.minus(
+                enrichedOrder.remainingMakerTokenAmount = enrichedOrder.remainingMakerTokenAmount.minus(
                     filledOrCancelledTakerAmount.mul(rate)
                 );
 
@@ -280,8 +299,7 @@ export class OrderService {
             .catch(err => {
                 throw Error(err.message);
             }
-        );
-                     
+        );          
     }
 
     private init() {

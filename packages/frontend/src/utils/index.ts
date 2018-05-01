@@ -1,7 +1,7 @@
-import { SignedOrder } from '0x.js/lib/src/types';
+import { SignedOrder, OrderRelevantState } from '0x.js/lib/src/types';
 import { BigNumber } from 'bignumber.js';
 import { ECSignature } from '0x.js';
-import { SignedOrderSchema, TokenPairOrderbookSchema, TokenPairOrderbook } from '../types';
+import { SignedOrderSchema, TokenPairOrderbookSchema, TokenPairOrderbook, OrderRelevantStateSchema } from '../types';
 
 export class SerializerUtils {
 
@@ -48,5 +48,17 @@ export class SerializerUtils {
             asks: tokenPairOrderbookSchema.asks.map(ask => SerializerUtils.SignedOrderfromJSON(ask))
         };
     }
-  
+
+    public static OrderRelevantStateFromJSON(relevantStateSchema: OrderRelevantStateSchema): OrderRelevantState {
+        return {
+            makerBalance: new BigNumber(relevantStateSchema.makerBalance),
+            makerProxyAllowance: new BigNumber(relevantStateSchema.makerProxyAllowance),
+            makerFeeBalance: new BigNumber(relevantStateSchema.makerFeeBalance),
+            makerFeeProxyAllowance: new BigNumber(relevantStateSchema.makerFeeProxyAllowance),
+            filledTakerTokenAmount: new BigNumber(relevantStateSchema.filledTakerTokenAmount),
+            cancelledTakerTokenAmount: new BigNumber(relevantStateSchema.cancelledTakerTokenAmount),
+            remainingFillableMakerTokenAmount: new BigNumber(relevantStateSchema.remainingFillableMakerTokenAmount),
+            remainingFillableTakerTokenAmount: new BigNumber(relevantStateSchema.remainingFillableTakerTokenAmount)
+        };
+    }
 }

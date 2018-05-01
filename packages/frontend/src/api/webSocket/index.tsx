@@ -12,7 +12,7 @@ interface Props {
 
 interface State {
     subscriptionCount: number;
-    subscriptionIdMap: Map<TokenPair, number>;
+    subscriptionIdMap: Map<number, TokenPair>;
 }
 
 export class RelayerWebSocketChannel extends React.Component<Props, State> {
@@ -23,7 +23,7 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
 
         this.state = {
             subscriptionCount: 0,
-            subscriptionIdMap: new Map<TokenPair, number>()
+            subscriptionIdMap: new Map<number, TokenPair>()
         };
     }
 
@@ -39,9 +39,9 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
         if (!(this.webSocket.readyState === this.webSocket.OPEN)) {
             console.log('Connected client on port %s.', RELAYER_URL);
 
-            this.webSocket.onopen = (event: Event) => {
-                this.state.subscriptionIdMap.forEach((v: number, k: TokenPair, map) => {
-                    this.subscribe(k, v);
+            this.webSocket.onopen = async (event: Event) => {
+                this.state.subscriptionIdMap.forEach(async (v: TokenPair, k: number, map) => {
+                    await this.subscribe(v, k);
                 });
             };
                 
@@ -76,23 +76,23 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
                 console.log('got a snapshot orderbook event', orderbookSnapshotEvent);
                 this.props.onSnapshot(
                     orderbookSnapshotEvent, 
-                    this.state.subscriptionCount[orderbookSnapshotEvent.requestId]
+                    this.state.subscriptionIdMap.get(orderbookSnapshotEvent.requestId) as TokenPair
                 );
                 return;
             case 'update':
                 const orderbookUpdateEvent = orderbookEvent as WebSocketMessage<OrderbookUpdate>;
-                console.log('got a update orderbook event', orderbookEvent, orderbookUpdateEvent);
+                console.log('got a update orderbook event', orderbookUpdateEvent);
                 this.props.onUpdate(
                     orderbookUpdateEvent,
-                    this.state.subscriptionCount[orderbookUpdateEvent.requestId]
+                    this.state.subscriptionIdMap.get(orderbookUpdateEvent.requestId) as TokenPair
                 );
                 return;
             case 'close':
-                console.log('got a close orderbook event, reoppening channel', orderbookEvent);
+                console.log('got a close orderbook event, reopening channel', orderbookEvent);
                 this.initialiseConnection();
                 return;
             case 'error':
-                console.log('got an error orderbook event, reoppening channel', orderbookEvent);
+                console.log('got an error orderbook event, reopening channel', orderbookEvent);
                 this.initialiseConnection();
                 return;
             default:
@@ -117,7 +117,10 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
             }
         };
 
-        this.setState({ subscriptionCount: subscriptionCount });
+        await this.setState({ 
+            subscriptionCount: subscriptionCount,
+            subscriptionIdMap: this.state.subscriptionIdMap.set(subscriptionCount, tokenPair)
+        });
 
         await this.send('message', JSON.stringify(subscribeMessage));
     }
@@ -127,7 +130,7 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
         
         await this.setState({
             subscriptionCount: 0,
-            subscriptionIdMap: new Map<TokenPair, number>()
+            subscriptionIdMap: new Map<number, TokenPair>()
         });
     }
 

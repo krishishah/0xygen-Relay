@@ -92,8 +92,11 @@ export class WebSocketHandler {
         this.connectionMetadataSet.delete(connectionMetadata);
     }
 
-    // tslint:disable-next-line:no-any
-    private onMessageFromClientSocket(message: any, connectionMetadata: WebSocketConnectionMetadata) {
+    private async onMessageFromClientSocket(
+        // tslint:disable-next-line:no-any
+        message: any, 
+        connectionMetadata: WebSocketConnectionMetadata
+    ): Promise<void> {
         if (message.type === 'utf8' && message.utf8Data !== undefined) {
             const parsedMessage = JSON.parse(message.utf8Data) as WebSocketMessage<Subscribe>;
             console.log('WS: Received Message: ' + parsedMessage.type);
@@ -121,6 +124,11 @@ export class WebSocketHandler {
                                 payload: SerializerUtils.TokenPairOrderbooktoJSON(orderbook)
                             };
                             socketConnection.sendUTF(JSON.stringify(returnMessage));
+                            
+                            return this.orderService.publishOrderbookUpdate(
+                                baseTokenAddress, 
+                                quoteTokenAddress
+                            );
                         }
                     );
                 }
@@ -128,7 +136,9 @@ export class WebSocketHandler {
         }
     }
 
-    private handleOrderbookUpdate(data: OrderEvent<OrderAdded | OrderUpdated | OrderRemoved>) { 
+    private handleOrderbookUpdate(
+        data: OrderEvent<OrderAdded | OrderUpdated | OrderRemoved>
+    ) { 
         const { makerTokenAddress, takerTokenAddress } = data.payload;
         const subChannels = [
                              `${makerTokenAddress}-${takerTokenAddress}`, 
@@ -153,7 +163,7 @@ export class WebSocketHandler {
                     payload: SerializerUtils.SignedOrdertoJSON(data.payload.order),
                 };
                 
-                activeConnection.socketConnection.sendUTF(orderAddedMessage);
+                activeConnection.socketConnection.sendUTF(JSON.stringify(orderAddedMessage));
             }
         });
     }

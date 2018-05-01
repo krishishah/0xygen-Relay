@@ -2,7 +2,7 @@ import * as React from 'react';
 import { promisify } from '@0xproject/utils';
 import { ZeroEx } from '0x.js/lib/src/0x';
 import Faucet from '../../../components/Faucet';
-import { Token } from '0x.js';
+import { Token, OrderState } from '0x.js';
 import { Dictionary } from 'lodash';
 import { TokenAllowance } from '../../App';
 import * as _ from 'lodash';
@@ -12,13 +12,15 @@ import { SerializerUtils } from '../../../utils';
 import { SignedOrder } from '@0xproject/types';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
-import { TransactionMessageStatus } from 'src/components/TransactionMessage';
+import { TransactionMessageStatus } from '../../../components/TransactionMessage';
 import { 
     TokenPair, 
     WebSocketMessage, 
     OrderbookSnapshot, 
     OrderbookUpdate, 
-    TokenPairOrderbook 
+    TokenPairOrderbook, 
+    EnrichedSignedOrder,
+    EnrichedTokenPairOrderbook
 } from '../../../types';
 import { 
     DropdownProps, 
@@ -54,7 +56,7 @@ interface State {
     tokenQuantity: BigNumber;
     baseToken: Token | undefined;
     quoteToken: Token | undefined;
-    orderbook: TokenPairOrderbook | undefined;
+    enrichedOrderbook: EnrichedTokenPairOrderbook | undefined;
     lowerBoundExchangeRate: BigNumber;
     upperBoundExchangeRate: BigNumber;
 }
@@ -62,7 +64,9 @@ interface State {
 export default class TradeTokens extends React.Component<Props, State> {
 
     relayerWsChannel: RelayerWebSocketChannel | null;
-    ordersToFill: SignedOrder[];
+
+    // Sets maintain insertion order
+    ordersToFill: Set<SignedOrder>;
     
     constructor(props: Props) {
         super(props);
@@ -72,7 +76,7 @@ export default class TradeTokens extends React.Component<Props, State> {
             tokenQuantity: new BigNumber(0),
             baseToken: undefined,
             quoteToken: undefined,
-            orderbook: undefined,
+            enrichedOrderbook: undefined,
             lowerBoundExchangeRate: new BigNumber(0),
             upperBoundExchangeRate: new BigNumber(0),
         };
@@ -81,6 +85,11 @@ export default class TradeTokens extends React.Component<Props, State> {
     componentWillUnmount() {
         if (this.relayerWsChannel) {
             this.relayerWsChannel.closeConnection();
+        }
+        try {
+            this.props.zeroEx.orderStateWatcher.unsubscribe();
+        } catch (e) {
+            console.log('TradeTokens componentWillUnmount error: ', e.message);
         }
     }
 
@@ -94,10 +103,13 @@ export default class TradeTokens extends React.Component<Props, State> {
     }
 
     handleTokenQuantityChange = async (e, { value }) => {
+        const previousState = Object.assign({}, this.state.tokenQuantity);
         if (value !== null) {
             try {
-                await this.setState({ tokenQuantity: new BigNumber(value) });
-                this.onPropertyChanged();
+                await this.setState( { tokenQuantity: new BigNumber(value) } );
+                if (!previousState) {
+                    this.onPropertyChanged();
+                }
             } catch( e ) {
                 console.log(e);
             }
@@ -139,11 +151,11 @@ export default class TradeTokens extends React.Component<Props, State> {
                 await this.relayerWsChannel.subscribe(tokenPair);
             } 
         } else {
-            this.ordersToFill = [];
+            this.ordersToFill = new Set();
         }
     }
 
-    onSnapshot = async (snapshot: WebSocketMessage<OrderbookSnapshot>, tokenPair: TokenPair) => {
+    onRelayerSnapshot = async (snapshot: WebSocketMessage<OrderbookSnapshot>, tokenPair: TokenPair) => {
         const tokenPairOrderbook = SerializerUtils.TokenPairOrderbookFromJSON(snapshot.payload);
         
         // Log number of bids and asks currently in the orderbook
@@ -151,61 +163,218 @@ export default class TradeTokens extends React.Component<Props, State> {
         const numberOfAsks = tokenPairOrderbook.asks.length;
         console.log(`SNAPSHOT: ${numberOfBids} bids & ${numberOfAsks} asks`);
 
+        // Enrich
+        const enrichedOrderbook = this.validateAndEnrichOrderbook(tokenPairOrderbook);
+
         // Sort bids and asks in order of best rates
-        tokenPairOrderbook.bids.sort(this.sortBids);
-        tokenPairOrderbook.asks.sort(this.sortAsks);
+        enrichedOrderbook.bids.sort(this.sortEnrichedAsks);
+        enrichedOrderbook.asks.sort(this.sortEnrichedAsks);
 
-        // onSnapshot is only called once both base and quote tokens have been chosen
-        const baseToken = this.state.baseToken as Token;
-        const quoteToken = this.state.quoteToken as Token;
-
-        await this.setState({
-            orderbook: tokenPairOrderbook
-        });
+        await this.setState({ enrichedOrderbook });
 
         await this.calculateRateRange();
+
     }
 
-    sortBids = (a: SignedOrder, b: SignedOrder) => {
-        const orderRateA = a.makerTokenAmount.dividedBy(a.takerTokenAmount);
-        const orderRateB = b.makerTokenAmount.dividedBy(b.takerTokenAmount);
+    sortEnrichedBids = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
+        const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
+        const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
         return orderRateB.comparedTo(orderRateA);
     }
 
-    sortAsks = (a: SignedOrder, b: SignedOrder) => {
-        const orderRateA = a.makerTokenAmount.dividedBy(a.takerTokenAmount);
-        const orderRateB = b.makerTokenAmount.dividedBy(b.takerTokenAmount);
+    sortEnrichedAsks = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
+        const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
+        const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
         return orderRateA.comparedTo(orderRateB);
     }
 
-    onUpdate = async (update: WebSocketMessage<OrderbookUpdate>, tokenPair: TokenPair) => {
+    onRelayerUpdate = async (update: WebSocketMessage<OrderbookUpdate>, tokenPair: TokenPair) => {
         const zeroEx = this.props.zeroEx;
-        const orderbook = Object.assign({}, this.state.orderbook) as TokenPairOrderbook;
+        const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook) as EnrichedTokenPairOrderbook;
         const order: SignedOrder = SerializerUtils.SignedOrderfromJSON(update.payload);
         
         // Log order hash
         const orderHash = ZeroEx.getOrderHashHex(order);
         console.log(`NEW ORDER: ${orderHash}`);
 
-        // Ask - Taker buys base token, Maker buys quote token
-        if (order.makerTokenAddress === tokenPair.base.address) {
-            // TODO: Find more efficient method of adding new asks in sorted fashion
-            orderbook.asks.push(order);
-            orderbook.asks.sort(this.sortAsks);
-        }
+        // TODO: Deal with updates on orders which already exist in orderbook
 
-        // Bids - Maker buys base token, Taker buys quote token
-        if (order.makerTokenAddress === tokenPair.quote.address) {
-            // TODO: Find more efficient method of adding new bids in sorted fashion
-            orderbook.bids.push(order);
-            orderbook.bids.sort(this.sortAsks);
-        }
-        
-        this.setState({
-            orderbook: orderbook
+        // Enrich Order
+        this.validateAndEnrichSignedOrder(order)
+            .then((enrichedOrder: EnrichedSignedOrder) => {    
+                // Ask - Taker buys base token, Maker buys quote token
+                if (order.makerTokenAddress === tokenPair.base.address) {
+                    // TODO: Find more efficient method of adding new asks in sorted fashion
+                    enrichedOrderbook.asks.push(enrichedOrder);
+                    enrichedOrderbook.asks.sort(this.sortEnrichedAsks);
+                }
+
+                // Bids - Maker buys base token, Taker buys quote token
+                if (order.makerTokenAddress === tokenPair.quote.address) {
+                    // TODO: Find more efficient method of adding new bids in sorted fashion
+                    enrichedOrderbook.bids.push(enrichedOrder);
+                    enrichedOrderbook.bids.sort(this.sortEnrichedBids);
+                }
+                
+                this.setState({
+                    enrichedOrderbook
+                });
+
+                return this.calculateRateRange();
+            })
+            .catch(err => {
+                console.log(`Invalid Signed Order Update ${JSON.stringify(order)} with Error: ${err.message}`)
+            }
+        );
+    }
+
+    validateAndEnrichOrderbook(orderbook: TokenPairOrderbook): EnrichedTokenPairOrderbook {
+        let enrichedBids: EnrichedSignedOrder[] = [];
+        let enrichedAsks: EnrichedSignedOrder[] = [];
+
+        orderbook.bids.map(order => {
+            this.validateAndEnrichSignedOrder(order)
+                .then(enrichedOrder => enrichedBids.push(enrichedOrder))
+                .catch(e => console.log(`Invalid Order Error ${e.message}`));
         });
 
-        await this.calculateRateRange();
+        orderbook.asks.map(order => {
+            this.validateAndEnrichSignedOrder(order)
+                .then(enrichedOrder => enrichedAsks.push(enrichedOrder))
+                .catch(e => console.log(`Invalid Order Error ${e.message}`));
+        });
+
+        const enrichedTokenPairOrderbook: EnrichedTokenPairOrderbook = {
+            bids: enrichedBids,
+            asks: enrichedAsks
+        };
+        return enrichedTokenPairOrderbook;
+    }
+
+    validateAndEnrichSignedOrder(signedOrder: SignedOrder): Promise<EnrichedSignedOrder> {
+        const zeroEx = this.props.zeroEx;
+
+        let orderHashHex: string = ZeroEx.getOrderHashHex(signedOrder);
+        
+        const enrichedOrder: EnrichedSignedOrder = {
+            signedOrder: signedOrder,
+            remainingMakerTokenAmount: signedOrder.makerTokenAmount,
+            remainingTakerTokenAmount: signedOrder.takerTokenAmount
+        };
+
+        let remainingFillableTakerAmount = new BigNumber(0);
+
+        return zeroEx
+            .exchange
+            .getCancelledTakerAmountAsync(orderHashHex)
+            .then((cancelledTakerAmount: BigNumber) => {
+                remainingFillableTakerAmount = remainingFillableTakerAmount.add(cancelledTakerAmount);
+                return zeroEx.exchange.getFilledTakerAmountAsync(orderHashHex);
+            })
+            .then((filledTakerAmount: BigNumber) => {
+                remainingFillableTakerAmount = remainingFillableTakerAmount.add(filledTakerAmount);
+                
+                if (!remainingFillableTakerAmount.lessThan(signedOrder.takerTokenAmount)) {
+                    throw (
+                        `Unfillable Order Error! Order has no fillable tokens remaining:\n
+                        ${JSON.stringify(signedOrder)}`
+                    );
+                }
+
+                const rate = enrichedOrder.signedOrder.makerTokenAmount.div(
+                    enrichedOrder.signedOrder.takerTokenAmount
+                );
+                
+                enrichedOrder.remainingTakerTokenAmount = enrichedOrder.remainingTakerTokenAmount.minus(
+                    remainingFillableTakerAmount
+                );
+
+                enrichedOrder.remainingMakerTokenAmount = enrichedOrder.remainingMakerTokenAmount.minus(
+                    remainingFillableTakerAmount.mul(rate)
+                );
+
+                return enrichedOrder;
+            })
+            .catch(err => {
+                throw err;
+            }
+        );          
+    }
+
+    updateEnrichedOrderbook = async (
+        orderHash: string, 
+        remMakerTokenAmout: BigNumber,
+        remTakerTokenAmount: BigNumber
+    ): Promise<boolean> => {
+        if (this.state.enrichedOrderbook) {
+            const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook);
+
+            let enrichedOrder = enrichedOrderbook.asks.find(order => {
+                return ZeroEx.getOrderHashHex(order.signedOrder) === orderHash;
+            });
+    
+            enrichedOrder = enrichedOrder || enrichedOrderbook.bids.find(order => {
+                return ZeroEx.getOrderHashHex(order.signedOrder) === orderHash;
+            });
+
+            // We don't want to return undefined hence the need for this check
+            if (!enrichedOrder) {
+                return false;
+            }
+
+            enrichedOrder.remainingMakerTokenAmount = remMakerTokenAmout;
+            enrichedOrder.remainingTakerTokenAmount = remTakerTokenAmount;
+
+            await this.setState({ enrichedOrderbook });
+
+            return true;
+        }
+        return false;
+    }
+
+    removeOrderFromEnrichedOrderbook = async (
+        orderHash: string, 
+    ): Promise<void> => {
+        if (this.state.enrichedOrderbook) {
+            const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook);
+
+            enrichedOrderbook.asks.filter(order => {
+                return ZeroEx.getOrderHashHex(order.signedOrder) !== orderHash;
+            });
+    
+            enrichedOrderbook.bids.filter(order => {
+                return ZeroEx.getOrderHashHex(order.signedOrder) !== orderHash;
+            });
+
+            await this.setState({ enrichedOrderbook });
+        }
+    }
+
+    // TODO: Implement special logic for Order fills and cancellations - Currently maker/taker amount is set to 0
+    onOrderWatcherEvent = async (err: Error | null, orderState?: OrderState) => {
+        if (orderState && orderState.isValid) {
+            const orderRelevantState = orderState.orderRelevantState;
+            
+            this.updateEnrichedOrderbook(
+                orderState.orderHash,
+                orderRelevantState.remainingFillableMakerTokenAmount,
+                orderRelevantState.remainingFillableTakerTokenAmount
+            )
+            .then((success: boolean) => {
+                if (!success) {
+                    return this.props.zeroEx.orderStateWatcher.removeOrder(orderState.orderHash);
+                } else {
+                    return this.calculateRateRange();
+                }
+            });
+        } else if (orderState && !orderState.isValid) {
+            // Invalid OrderState or non existent OrderState with Error
+            this.props.zeroEx.orderStateWatcher.removeOrder(orderState.orderHash);
+
+            // Remove order && recalculate rates
+            this.removeOrderFromEnrichedOrderbook(orderState.orderHash)
+                .then(this.calculateRateRange);            
+        }
     }
 
     calculateRateRange = async () => {
@@ -213,7 +382,7 @@ export default class TradeTokens extends React.Component<Props, State> {
         let quoteToken = this.state.quoteToken;
         const tradeAction = this.state.tradeAction;
         const tokenQuantity = this.state.tokenQuantity;
-        const orderbook = this.state.orderbook;
+        const enrichedOrderbook = this.state.enrichedOrderbook;
 
         let minExchangeRate;
         let maxExchangeRate;
@@ -223,9 +392,9 @@ export default class TradeTokens extends React.Component<Props, State> {
             quoteToken && 
             tokenQuantity.greaterThan(0) &&
             tradeAction === 'Buy' && 
-            orderbook !== undefined
+            enrichedOrderbook !== undefined
         ) {
-            const asks: SignedOrder[] = orderbook.asks;
+            const asks: EnrichedSignedOrder[] = enrichedOrderbook.asks;
 
             baseToken = this.state.baseToken as Token;
             quoteToken = this.state.quoteToken as Token;
@@ -237,22 +406,22 @@ export default class TradeTokens extends React.Component<Props, State> {
             let upperBoundQuoteTokenQuantity: BigNumber = new BigNumber(0);
 
             // TODO: Save to state
-            this.ordersToFill = [];
+            this.ordersToFill = new Set();
 
             // Calculate Lower Bound
             let i;
             for (i = 0; i < asks.length; i++) {
-                const order: SignedOrder = asks[i];
+                const enrichedOrder: EnrichedSignedOrder = asks[i];
                 if (lowerBoundBaseTokenQuantity.lessThan(tokenQuantity)) {
-                    console.log(`lower bound signed order: ${JSON.stringify(order)}`);
+                    console.log(`lower bound signed order: ${JSON.stringify(enrichedOrder)}`);
 
                     const makerTokenAmount = ZeroEx.toUnitAmount(
-                        new BigNumber(order.makerTokenAmount),
+                        new BigNumber(enrichedOrder.remainingMakerTokenAmount),
                         baseToken.decimals
                     );
         
                     const takerTokenAmount = ZeroEx.toUnitAmount(
-                        new BigNumber(order.takerTokenAmount),
+                        new BigNumber(enrichedOrder.remainingTakerTokenAmount),
                         quoteToken.decimals
                     );
 
@@ -267,7 +436,7 @@ export default class TradeTokens extends React.Component<Props, State> {
 
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     lowerBoundQuoteTokenQuantity = lowerBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
-                    this.ordersToFill.push(order);
+                    this.ordersToFill.add(enrichedOrder.signedOrder);
                 } else {
                     break;
                 }
@@ -278,20 +447,20 @@ export default class TradeTokens extends React.Component<Props, State> {
 
             // Calculate Upper Bound
             for (i; i >= 0; i--) {
-                const order: SignedOrder = asks[i];
+                const enrichedOrder: EnrichedSignedOrder = asks[i];
                 if ((upperBoundBaseTokenQuantity.lessThan(tokenQuantity))) {
                     
                     const makerTokenAmount = ZeroEx.toUnitAmount(
-                        new BigNumber(order.makerTokenAmount),
+                        new BigNumber(enrichedOrder.remainingMakerTokenAmount),
                         baseToken.decimals
                     );
         
                     const takerTokenAmount = ZeroEx.toUnitAmount(
-                        new BigNumber(order.takerTokenAmount),
+                        new BigNumber(enrichedOrder.remainingTakerTokenAmount),
                         quoteToken.decimals
                     );
 
-                    console.log(`upper bound signed order: ${JSON.stringify(order)}`);
+                    console.log(`upper bound signed order: ${JSON.stringify(enrichedOrder)}`);
                     let baseTokenQuantityToFill = tokenQuantity.minus(upperBoundBaseTokenQuantity);
                     let orderRate = takerTokenAmount.div(makerTokenAmount);
                     
@@ -303,7 +472,11 @@ export default class TradeTokens extends React.Component<Props, State> {
 
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     upperBoundQuoteTokenQuantity = upperBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
-                    this.ordersToFill.push(order);
+
+                    if (!this.ordersToFill.has(enrichedOrder.signedOrder)) {
+                        this.ordersToFill.add(enrichedOrder.signedOrder);
+                    }
+
                 } else {
                     break;
                 }
@@ -327,18 +500,17 @@ export default class TradeTokens extends React.Component<Props, State> {
             baseToken.decimals
         );
 
-        if (this.ordersToFill.length > 0 
+        if (this.ordersToFill.size > 0 
             && baseToken 
             && quoteToken 
             && fillQuantity.greaterThan(0)
         ) {
             handleTxMsg('LOADING');
 
-            console.log('hash:' + ZeroEx.getOrderHashHex(this.ordersToFill[0]));
             console.log('signed orders to fill:' + JSON.stringify(this.ordersToFill));
             try {
-                const txMsg = await this.props.zeroEx.exchange.fillOrderAsync(
-                    this.ordersToFill[0], 
+                const txMsg = await this.props.zeroEx.exchange.fillOrdersUpToAsync(
+                    Array.from(this.ordersToFill), 
                     fillQuantity, 
                     true, 
                     takerAddress
@@ -421,8 +593,8 @@ export default class TradeTokens extends React.Component<Props, State> {
             <Form style={{ height: '100%' }}>
                 <RelayerWebSocketChannel
                     ref={ref => (this.relayerWsChannel = ref)} 
-                    onSnapshot={this.onSnapshot}
-                    onUpdate={this.onUpdate}
+                    onSnapshot={this.onRelayerSnapshot}
+                    onUpdate={this.onRelayerUpdate}
                 />
                 <Form.Group inline style={{display: 'flex', justifyContent: 'center'}}>
                     <label>I would like to:</label>

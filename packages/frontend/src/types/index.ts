@@ -1,6 +1,7 @@
-import { ECSignature } from '0x.js/lib/src/types';
+import { ECSignature, OrderRelevantState } from '0x.js/lib/src/types';
 import { Token } from '0x.js';
 import { SignedOrder } from '@0xproject/types';
+import { BigNumber } from 'bignumber.js';
 
 type Address = string;
 
@@ -25,14 +26,36 @@ export interface TokenPairOrderbookSchema {
     asks: SignedOrderSchema[];
 }
 
+export interface OrderRelevantStateSchema {
+    makerBalance: string;
+    makerProxyAllowance: string;
+    makerFeeBalance: string;
+    makerFeeProxyAllowance: string;
+    filledTakerTokenAmount: string;
+    cancelledTakerTokenAmount: string;
+    remainingFillableMakerTokenAmount: string;
+    remainingFillableTakerTokenAmount: string;
+}
+
 export interface TokenPair {
     base: Token;
     quote: Token;
 }
 
+export interface EnrichedSignedOrder {
+    signedOrder: SignedOrder;
+    remainingMakerTokenAmount: BigNumber;
+    remainingTakerTokenAmount: BigNumber;
+}
+
 export interface TokenPairOrderbook {
     bids: SignedOrder[];
     asks: SignedOrder[];
+}
+
+export interface EnrichedTokenPairOrderbook {
+    bids: EnrichedSignedOrder[];
+    asks: EnrichedSignedOrder[];
 }
 
 export interface WebSocketMessage<T extends OrderbookUpdate | Subscribe | OrderbookSnapshot> {
