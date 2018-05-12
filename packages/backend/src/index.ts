@@ -24,10 +24,10 @@ export const TEST_RPC_NETWORK_ID: number = 50;
 export const TEST_RPC: string = 'http://localhost:8545';
 
 export const orderStateWatcherConfig: OrderStateWatcherConfig = {
-    orderExpirationCheckingIntervalMs: 200,
-    eventPollingIntervalMs: 200,
-    expirationMarginMs: 100,
-    cleanupJobIntervalMs: 100000,
+    // orderExpirationCheckingIntervalMs: 200,
+    // eventPollingIntervalMs: 200,
+    // expirationMarginMs: 100,
+    // cleanupJobIntervalMs: 100000,
     stateLayer: BlockParamLiteral.Latest
 };
 

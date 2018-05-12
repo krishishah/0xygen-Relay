@@ -1,18 +1,18 @@
 import * as React from 'react';
 import { promisify } from '@0xproject/utils';
 import { ZeroEx } from '0x.js/lib/src/0x';
-import Faucet from '../../../components/Faucet';
+import Faucet from '../../../../components/Faucet';
 import { Token, OrderState } from '0x.js';
 import { Dictionary } from 'lodash';
-import { TokenAllowance } from '../../App';
+import { TokenAllowance } from '../../../App';
 import * as _ from 'lodash';
-import { RelayerWebSocketChannel } from '../../../api/webSocket';
+import { RelayerWebSocketChannel } from '../../../../api/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
-import { SerializerUtils } from '../../../utils';
+import { SerializerUtils } from '../../../../utils';
 import { SignedOrder } from '@0xproject/types';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
-import { TransactionMessageStatus } from '../../../components/TransactionMessage';
+import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
 import { 
     TokenPair, 
     WebSocketMessage, 
@@ -21,7 +21,7 @@ import {
     TokenPairOrderbook, 
     EnrichedSignedOrder,
     EnrichedTokenPairOrderbook
-} from '../../../types';
+} from '../../../../types';
 import { 
     DropdownProps, 
     Dropdown, 
@@ -48,7 +48,7 @@ interface Props {
     tokensWithAllowance: Dictionary<TokenAllowance>;
     zeroExProxyTokens: Token[];
     accounts: string[];
-    setTransactionMessageState: (status: TransactionMessageStatus, message?: string) => void;
+    setTransactionMessageState: (status: UserActionMessageStatus, message?: string) => void;
 }
 
 interface State {
@@ -66,7 +66,7 @@ export default class TradeTokens extends React.Component<Props, State> {
     relayerWsChannel: RelayerWebSocketChannel | null;
 
     // Sets maintain insertion order
-    ordersToFill: Set<SignedOrder>;
+    ordersToFill: Map<string, SignedOrder>;
     
     constructor(props: Props) {
         super(props);
@@ -109,6 +109,8 @@ export default class TradeTokens extends React.Component<Props, State> {
                 await this.setState( { tokenQuantity: new BigNumber(value) } );
                 if (!previousState) {
                     this.onPropertyChanged();
+                } else {
+                    this.calculateRateRange();
                 }
             } catch( e ) {
                 console.log(e);
@@ -151,7 +153,7 @@ export default class TradeTokens extends React.Component<Props, State> {
                 await this.relayerWsChannel.subscribe(tokenPair);
             } 
         } else {
-            this.ordersToFill = new Set();
+            this.ordersToFill = new Map();
         }
     }
 
@@ -196,8 +198,22 @@ export default class TradeTokens extends React.Component<Props, State> {
         // Log order hash
         const orderHash = ZeroEx.getOrderHashHex(order);
         console.log(`NEW ORDER: ${orderHash}`);
+        console.log('ask array length', JSON.stringify(this.state.enrichedOrderbook));
 
-        // TODO: Deal with updates on orders which already exist in orderbook
+        // Return if order already exists in orderbook
+        for (let x = 0; x < enrichedOrderbook.asks.length; x++) {
+            if (ZeroEx.getOrderHashHex(enrichedOrderbook.asks[x].signedOrder) === ZeroEx.getOrderHashHex(order)) {
+                console.log('REPEAT ASK IGNORING');
+                return;
+            }
+        }
+
+        for (let x = 0; x < enrichedOrderbook.bids.length; x++) {
+            if (ZeroEx.getOrderHashHex(enrichedOrderbook.bids[x].signedOrder) === ZeroEx.getOrderHashHex(order)) {
+                console.log('REPEAT BID IGNORING');
+                return;
+            }
+        }
 
         // Enrich Order
         this.validateAndEnrichSignedOrder(order)
@@ -406,7 +422,7 @@ export default class TradeTokens extends React.Component<Props, State> {
             let upperBoundQuoteTokenQuantity: BigNumber = new BigNumber(0);
 
             // TODO: Save to state
-            this.ordersToFill = new Set();
+            this.ordersToFill = new Map();
 
             // Calculate Lower Bound
             let i;
@@ -436,7 +452,11 @@ export default class TradeTokens extends React.Component<Props, State> {
 
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     lowerBoundQuoteTokenQuantity = lowerBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
-                    this.ordersToFill.add(enrichedOrder.signedOrder);
+
+                    const hashHex = ZeroEx.getOrderHashHex(enrichedOrder.signedOrder);
+                    if (!this.ordersToFill.has(ZeroEx.getOrderHashHex(enrichedOrder.signedOrder))) {
+                        this.ordersToFill.set(hashHex, enrichedOrder.signedOrder);
+                    }
                 } else {
                     break;
                 }
@@ -473,10 +493,10 @@ export default class TradeTokens extends React.Component<Props, State> {
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     upperBoundQuoteTokenQuantity = upperBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
 
-                    if (!this.ordersToFill.has(enrichedOrder.signedOrder)) {
-                        this.ordersToFill.add(enrichedOrder.signedOrder);
+                    const hashHex = ZeroEx.getOrderHashHex(enrichedOrder.signedOrder);
+                    if (!this.ordersToFill.has(ZeroEx.getOrderHashHex(enrichedOrder.signedOrder))) {
+                        this.ordersToFill.set(hashHex, enrichedOrder.signedOrder);
                     }
-
                 } else {
                     break;
                 }
@@ -506,16 +526,20 @@ export default class TradeTokens extends React.Component<Props, State> {
             && fillQuantity.greaterThan(0)
         ) {
             handleTxMsg('LOADING');
-
-            console.log('signed orders to fill:' + JSON.stringify(this.ordersToFill));
+            
+            const orderArray = Array.from(this.ordersToFill.values());
+            
+            console.log('signed orders to fill:' + JSON.stringify(orderArray));
+            console.log('Order fill amount:' + fillQuantity);
+            
             try {
                 const txMsg = await this.props.zeroEx.exchange.fillOrdersUpToAsync(
-                    Array.from(this.ordersToFill), 
+                    orderArray, 
                     fillQuantity, 
                     true, 
                     takerAddress
                 );
-                handleTxMsg('SUCCESS', txMsg);
+                handleTxMsg('TRADE_SUCCESS', txMsg);
             } catch (error) {
                 handleTxMsg('FAILURE', error.message);
             }
@@ -635,7 +659,7 @@ export default class TradeTokens extends React.Component<Props, State> {
                     onChange={this.handleQuoteTokenDropDownItemSelected}
                     placeholder="Token"
                 />
-                <h5>You Will {tradeAction === 'Buy' ? 'Spend' : 'Purchase'}:</h5>
+                <Divider horizontal>You Will {tradeAction === 'Buy' ? 'Spend' : 'Purchase'}</Divider>
                 {tokenStatistics}
                 <div style={{margin: '1em', display: 'flex', justifyContent: 'center'}}>
                     <Form.Field 

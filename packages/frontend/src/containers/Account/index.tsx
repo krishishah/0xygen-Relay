@@ -4,10 +4,11 @@ import { ZeroEx, Token } from '0x.js';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import * as Web3 from 'web3';
 import { BigNumber } from '@0xproject/utils';
-import { Button, Container, Table, Header } from 'semantic-ui-react';
-import { BalanceTableRow } from '../../containers/Account/BalanceTableRow';
-import { TokenBalance } from '../../containers/App';
+import { Button, Container, Table, Header, List, Image, Divider } from 'semantic-ui-react';
+import { BalanceTableRow } from '../Account/BalanceTableRow';
+import { TokenBalance } from '../App';
 import { Dictionary } from 'lodash';
+import * as blockies from 'ethereum-blockies';
 
 interface Props {
     accounts: string[];
@@ -30,6 +31,15 @@ export default class Account extends React.Component<Props, {}> {
         const balances = this.props.tokenBalances;
         const etherBalance = this.props.etherBalance.toString();
 
+        // Icon is a canvas object
+        const icon = blockies.create({
+            seed: this.props.accounts[0],
+            size: 15,
+            scale: 3, 
+        });
+
+        const imageSrc = icon.toDataURL();
+
         if (Object.keys(balances).length > 0) {
             
             const tokenBalances = _.map(balances, (v: TokenBalance, k: string) => {
@@ -38,18 +48,38 @@ export default class Account extends React.Component<Props, {}> {
                     <BalanceTableRow 
                         key={pairString} 
                         tokenName={v.token.name}
-                        tokenSymbol={v.token.symbol} 
-                        value={v.balance.toString()}/>
+                        tokenSymbol={v.token.symbol}
+                        value={v.balance.toString()}
+                    />
                 );
             });
 
             return (
                 <div>
-                    <h2 style={{textAlign: "center"}}>Wallet</h2>
-                    <h5>Account Address: {account.toString()}</h5>
-                    <h5>Balance: {etherBalance} ETH</h5>
-                    <Container style={{display: 'flex', justifyContent: 'center', padding: '2em'}}>
-                        <Table basic="very" celled collapsing>
+                    <h2 style={{textAlign: 'center'}}>WALLET</h2>
+                    <List size="large">
+                        <List.Item>
+                            <Image avatar src={imageSrc}/>
+                            <List.Content>
+                                <List.Header>Account Address:</List.Header>
+                                <List.Description>{account.toString()}</List.Description>
+                            </List.Content>
+                        </List.Item>
+                        <List.Item>
+                            <Image 
+                                avatar 
+                                src="https://www.shareicon.net/data/128x128/2016/07/08/117398_eth_512x512.png"
+                            />
+                            <List.Content>
+                            
+                                <List.Header>Balance:</List.Header>
+                                <List.Description>{etherBalance} ETH</List.Description>
+                            </List.Content>
+                        </List.Item>
+                    </List>
+                    <Divider horizontal>Token Balances</Divider>
+                    <Container style={{display: 'flex', justifyContent: 'center'}}>
+                        <Table basic="very" collapsing size="large" style={{width: '100%'}}>
                             <Table.Header>
                                 <Table.Row>
                                     <Table.HeaderCell>Token</Table.HeaderCell>
@@ -63,7 +93,6 @@ export default class Account extends React.Component<Props, {}> {
                     </Container>
                 </div>
             );
-
         } else {
             return (
                 <Container textAlign="center">

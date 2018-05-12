@@ -3,7 +3,7 @@ import Welcome from '../../components/Welcome';
 import Account from '../Account';
 import Web3Actions from '../../components/Web3Actions';
 import Faucet from '../../components/Faucet';
-import { Dashboard } from '../../components/Dashboard';
+import { Dashboard, UserWorflow } from '../../components/Dashboard';
 import InstallMetamask from '../../components/InstallMetamask';
 import * as Web3 from 'web3';
 import * as RPCSubprovider from 'web3-provider-engine/subproviders/rpc';
@@ -11,13 +11,16 @@ import * as _ from 'lodash';
 import { BigNumber } from 'bignumber.js';
 import { Dictionary } from 'lodash';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
-import SetAllowances from '../Steps/SetAllowances';
-import TradeTokens from '../Steps/TradeTokens';
+import SetAllowances from '../Steps/Shared/SetAllowances';
+import TradeTokens from '../Steps/Taker/TradeTokens';
+import CreateOrder from '../Steps/Maker/CreateOrder';
+import SubmitSignedOrder from '../Steps/Maker/SubmitSignedOrder';
+
 import { 
-    TransactionMessage, 
-    TransactionMessageProps,
-    TransactionMessageStatus
-} from '../../components/TransactionMessage';
+    UserActionMessage, 
+    UserActionMessageProps,
+    UserActionMessageStatus
+} from '../../components/UserActionMessage';
 import { 
     Divider, 
     Container, 
@@ -28,19 +31,26 @@ import {
     Grid, 
     DropdownItemProps, 
     Message,
-    GridColumn
+    GridColumn,
+    MenuItemProps
 } from 'semantic-ui-react';
 import { 
     InjectedWeb3Subprovider, 
     RedundantRPCSubprovider 
 } from '@0xproject/subproviders';
 import { 
-    SimpleTradeStepsHeader, 
-    SimpleTradeStep 
-} from '../../components/SimpleTradeSteps';
+    SimpleTakerTradeStepsHeader, 
+    SimpleTakerTradeStep 
+} from '../../components/SimpleTakerTradeSteps';
+import { 
+    SimpleMakerTradeStepsHeader, 
+    SimpleMakerTradeStep 
+} from '../../components/SimpleMakerTradeSteps';
+
 import { 
     ZeroEx, 
-    Token 
+    Token, 
+    SignedOrder
 } from '0x.js';
 import { 
     KOVAN_RPC, 
@@ -69,10 +79,13 @@ interface State {
     accounts: string[];
     tokenBalances: Dictionary<TokenBalance>;
     etherBalance: BigNumber;
-    activeStep: SimpleTradeStep;
+    activeTakerStep: SimpleTakerTradeStep;
+    activeMakerStep: SimpleMakerTradeStep;
     tokensWithAllowances: Dictionary<TokenAllowance>;
     zeroExRegistryTokens: Token[];
-    transactionMessage: TransactionMessageProps;
+    transactionMessage: UserActionMessageProps;
+    activeUserWorkflow: UserWorflow;
+    submitableMakerSignedOrder: undefined | SignedOrder;
 }
 
 export default class App extends React.Component<Props, State> {
@@ -88,14 +101,17 @@ export default class App extends React.Component<Props, State> {
             accounts: [''], 
             tokenBalances: {},
             etherBalance: new BigNumber(0),
-            activeStep: 'Allowance',
+            activeTakerStep: 'Allowance',
+            activeMakerStep: 'Allowance',
             tokensWithAllowances: {},
             zeroExRegistryTokens: [],
             transactionMessage: {
                 message: '',
                 status: 'NONE',
                 dismissMessage: this.dismissTransactionMessage
-            }
+            },
+            activeUserWorkflow: 'Taker',
+            submitableMakerSignedOrder: undefined
         };
     }
 
@@ -253,9 +269,15 @@ export default class App extends React.Component<Props, State> {
         });
     }
 
-    private changeStep = async (newStep: SimpleTradeStep) => {
-        this.setState({
-            activeStep: newStep
+    private changeTakerStep = async (newStep: SimpleTakerTradeStep) => {
+        await this.setState({
+            activeTakerStep: newStep
+        });
+    }
+
+    private changeMakerStep = async (newStep: SimpleMakerTradeStep) => {
+        await this.setState({
+            activeMakerStep: newStep
         });
     }
 
@@ -269,7 +291,7 @@ export default class App extends React.Component<Props, State> {
         });
     }
 
-    private setTransactionMessageState = (status: TransactionMessageStatus, message?: string) => {
+    private setTransactionMessageState = (status: UserActionMessageStatus, message?: string) => {
         this.setState({
             transactionMessage: {
                 message,
@@ -279,84 +301,199 @@ export default class App extends React.Component<Props, State> {
         });
     }
 
+    private onChangeWorkflow = (event: React.MouseEvent<HTMLAnchorElement>, data: MenuItemProps) => {
+        data.name === 'Order Taker' ? 
+            this.setState({ activeUserWorkflow: 'Taker' }) 
+        : 
+            this.setState({ activeUserWorkflow: 'Maker' }); 
+    }
+
+    private renderMakerWorkflow = (): any => {
+        let makerStepToRender;
+        let activeMakerStep = this.state.activeMakerStep;
+
+        switch (activeMakerStep) {
+            case 'Allowance': {
+                makerStepToRender = (
+                    <SetAllowances 
+                        zeroEx={this.zeroEx} 
+                        accounts={this.state.accounts}
+                        tokensWithAllowances={this.state.tokensWithAllowances}
+                        zeroExRegistryTokens={this.state.zeroExRegistryTokens}
+                        fetchAllowances={this.fetchAllowances}
+                        setTokenAllowance={this.setTokenAllowance}
+                        fetchTokenAllowance={this.fetchTokenAllowance}
+                    />
+                );
+                break;
+            }
+            case 'CreateOrder': {
+                makerStepToRender = (
+                    <CreateOrder
+                        zeroEx={this.zeroEx}
+                        tokensWithAllowance={this.state.tokensWithAllowances} 
+                        zeroExProxyTokens={this.state.zeroExRegistryTokens}
+                        setTransactionMessageState={this.setTransactionMessageState}
+                        accounts={this.state.accounts}
+                        progressMakerStep={this.changeMakerStep}
+                        setSubmitableSignedOrder={this.setSubmitableSignedOrder}
+                    /> 
+                );
+                break;
+            }
+            // TODO: Figure out why this disappears after ive gone to a different step
+            case 'SubmitOrder': {
+                makerStepToRender = (
+                    <SubmitSignedOrder
+                        signedOrder={this.state.submitableMakerSignedOrder}
+                        setTransactionMessageState={this.setTransactionMessageState}
+                    />
+                );
+                break;
+            }
+            default:
+                break;
+        }
+
+        return (
+            <Card 
+                raised={true} 
+                centered={true} 
+                style={{ padding: '1em 1em 1em 1em', margin: '4em 0em 4em 0em', minWidth: '1100px'}}
+            >  
+                <UserActionMessage 
+                    status={this.state.transactionMessage.status} 
+                    message={this.state.transactionMessage.message} 
+                    dismissMessage={this.state.transactionMessage.dismissMessage}
+                />
+                <Card.Content>
+                    <Card.Header>
+                        <SimpleMakerTradeStepsHeader 
+                            activeStep={this.state.activeMakerStep}
+                            changeStep={this.changeMakerStep}
+                        />
+                    </Card.Header>
+                </Card.Content>
+                <Grid columns="2" style={{height: '100%'}}>
+                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
+                        <Card.Content style={{height: '100%'}}>
+                            {makerStepToRender}
+                        </Card.Content>
+                    </GridColumn>
+                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
+                        <Card.Content>
+                            <Account 
+                                accounts={this.state.accounts}
+                                tokenBalances={this.state.tokenBalances}
+                                etherBalance={this.state.etherBalance}
+                                fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
+                            />
+                        </Card.Content>
+                    </GridColumn>
+                </Grid>
+            </Card>
+        );
+    }
+
+    private setSubmitableSignedOrder = async (signedOrder: SignedOrder) => {
+        await this.setState({submitableMakerSignedOrder: signedOrder});
+    }
+
+    private renderTakerWorkflow = (): any => {
+        let takerStepToRender;
+        let activeTakerStep = this.state.activeTakerStep;
+
+        switch (activeTakerStep) {
+            case 'Allowance': {
+                takerStepToRender = (
+                    <SetAllowances 
+                        zeroEx={this.zeroEx} 
+                        accounts={this.state.accounts}
+                        tokensWithAllowances={this.state.tokensWithAllowances}
+                        zeroExRegistryTokens={this.state.zeroExRegistryTokens}
+                        fetchAllowances={this.fetchAllowances}
+                        setTokenAllowance={this.setTokenAllowance}
+                        fetchTokenAllowance={this.fetchTokenAllowance}
+                    />
+                );
+                break;
+            }
+            case 'Trade': {
+                takerStepToRender = (
+                    <TradeTokens 
+                        zeroEx={this.zeroEx}
+                        tokensWithAllowance={this.state.tokensWithAllowances} 
+                        zeroExProxyTokens={this.state.zeroExRegistryTokens}
+                        setTransactionMessageState={this.setTransactionMessageState}
+                        accounts={this.state.accounts}
+                    />
+                );
+                break;
+            }
+            default:
+                break;
+        }
+
+        return (
+            <Card 
+                raised={true} 
+                centered={true} 
+                style={{ padding: '1em 1em 1em 1em', margin: '4em 0em 4em 0em', minWidth: '1100px'}}
+            >  
+                <UserActionMessage 
+                    status={this.state.transactionMessage.status} 
+                    message={this.state.transactionMessage.message} 
+                    dismissMessage={this.state.transactionMessage.dismissMessage}
+                />
+                <Card.Content>
+                    <Card.Header>
+                        <SimpleTakerTradeStepsHeader 
+                            activeStep={this.state.activeTakerStep}
+                            changeStep={this.changeTakerStep}
+                        />
+                    </Card.Header>
+                </Card.Content>
+                <Grid columns="2" style={{height: '100%'}}>
+                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
+                        <Card.Content style={{height: '100%'}}>
+                            {takerStepToRender}
+                        </Card.Content>
+                    </GridColumn>
+                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
+                        <Card.Content>
+                            <Account 
+                                accounts={this.state.accounts}
+                                tokenBalances={this.state.tokenBalances}
+                                etherBalance={this.state.etherBalance}
+                                fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
+                            />
+                        </Card.Content>
+                    </GridColumn>
+                </Grid>
+            </Card>
+        );
+    }
+
     // tslint:disable-next-line:member-ordering
     render() {
         // Detect if Web3 is found, if not, ask the user to install Metamask
         // tslint:disable-next-line:no-any
         if (typeof (window as any).web3 !== 'undefined') {
-            let activeStep = this.state.activeStep;
-            let stepToRender;
-            
-            switch (activeStep) {
-                case 'Allowance': {
-                    stepToRender = (
-                        <SetAllowances 
-                            zeroEx={this.zeroEx} 
-                            accounts={this.state.accounts}
-                            tokensWithAllowances={this.state.tokensWithAllowances}
-                            zeroExRegistryTokens={this.state.zeroExRegistryTokens}
-                            fetchAllowances={this.fetchAllowances}
-                            setTokenAllowance={this.setTokenAllowance}
-                            fetchTokenAllowance={this.fetchTokenAllowance}
-                        />
-                    );
-                    break;
-                }
-                case 'Trade': {
-                    stepToRender = (
-                        <TradeTokens 
-                            zeroEx={this.zeroEx}
-                            tokensWithAllowance={this.state.tokensWithAllowances} 
-                            zeroExProxyTokens={this.state.zeroExRegistryTokens}
-                            setTransactionMessageState={this.setTransactionMessageState}
-                            accounts={this.state.accounts}
-                        />
-                    );
-                    break;
-                }
-                default:
-                    break;
+
+            let userWorkflow;
+            if (this.state.activeUserWorkflow === 'Taker') {
+                userWorkflow = this.renderTakerWorkflow();
+            } else {
+                userWorkflow = this.renderMakerWorkflow();
             }
 
             return (
                 <Container>
-                    <Dashboard/>
-                    <Card 
-                        raised={true} 
-                        centered={true} 
-                        style={{ padding: '1em 1em 1em 1em', margin: '4em 4em 4em 4em', minWidth: '1000px'}}
-                    >  
-                        <TransactionMessage 
-                            status={this.state.transactionMessage.status} 
-                            message={this.state.transactionMessage.message} 
-                            dismissMessage={this.state.transactionMessage.dismissMessage}
-                        />
-                        <Card.Content>
-                            <Card.Header>
-                                <SimpleTradeStepsHeader 
-                                    activeStep={this.state.activeStep}
-                                    changeStep={this.changeStep}
-                                />
-                            </Card.Header>
-                        </Card.Content>
-                        <Grid columns="2" style={{height: '100%'}}>
-                            <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
-                                <Card.Content style={{height: '100%'}}>
-                                    {stepToRender}
-                                </Card.Content>
-                            </GridColumn>
-                            <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
-                                <Card.Content>
-                                    <Account 
-                                        accounts={this.state.accounts}
-                                        tokenBalances={this.state.tokenBalances}
-                                        etherBalance={this.state.etherBalance}
-                                        fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
-                                    />
-                                </Card.Content>
-                            </GridColumn>
-                        </Grid>
-                    </Card>
+                    <Dashboard
+                        activeWorkflow={this.state.activeUserWorkflow}
+                        onChangeWorkflow={this.onChangeWorkflow}
+                    />
+                    {userWorkflow}
                 </Container>
             );
         } else {

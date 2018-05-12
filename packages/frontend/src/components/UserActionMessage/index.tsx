@@ -1,17 +1,17 @@
 import * as React from 'react';
 import { Message, Icon } from 'semantic-ui-react';
 
-export type TransactionMessageStatus = 'LOADING' | 'SUCCESS' | 'FAILURE' | 'NONE';
+export type UserActionMessageStatus = 'LOADING' | 'SUCCESS' | 'FAILURE' | 'TRADE_SUCCESS' |'NONE';
 
-export interface TransactionMessageProps {
-    status: TransactionMessageStatus;
+export interface UserActionMessageProps {
+    status: UserActionMessageStatus;
     message?: string;
     dismissMessage: () => void;
 }
 
-export class TransactionMessage extends React.Component<TransactionMessageProps> {
+export class UserActionMessage extends React.Component<UserActionMessageProps> {
 
-    constructor(props: TransactionMessageProps) {
+    constructor(props: UserActionMessageProps) {
         super(props);
     }
 
@@ -29,11 +29,11 @@ export class TransactionMessage extends React.Component<TransactionMessageProps>
                         </Message.Content>
                     </Message>
                 );
-            case 'SUCCESS':
+            case 'TRADE_SUCCESS':
                 return (
                     <Message success attached="top" onDismiss={this.props.dismissMessage}>
                         <Message.Content>
-                            <Message.Header>Success!</Message.Header>
+                            <Message.Header>Trade Successful!</Message.Header>
                             <a href={`https://kovan.etherscan.io/tx/${message}`}>
                                 Transaction Receipt: https://kovan.etherscan.io/tx/${message}
                             </a>
@@ -49,6 +49,15 @@ export class TransactionMessage extends React.Component<TransactionMessageProps>
                         </Message.Content>
                     </Message>
                 );
+            case 'SUCCESS':
+            return (
+                <Message success attached="top" onDismiss={this.props.dismissMessage}>
+                    <Message.Content>
+                        <Message.Header>Success!</Message.Header>
+                        {message}
+                    </Message.Content>
+                </Message>
+            );
             default:
                 return null;
                 

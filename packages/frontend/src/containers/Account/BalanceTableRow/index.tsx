@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, Dropdown, Menu, Table, Header } from 'semantic-ui-react';
+import { Button, Dropdown, Menu, Table, Header, Image } from 'semantic-ui-react';
 import { BigNumber } from 'bignumber.js';
 
 interface State {}
@@ -17,10 +17,12 @@ export class BalanceTableRow extends React.Component<Props, State> {
     }
 
     render() {
+        const tokenImageDir = `/token_icons/${this.props.tokenSymbol}.png`;
         return (
             <Table.Row >
                 <Table.Cell>
-                    <Header as="h4">
+                    <Header as="h4" image>
+                        <Image src={tokenImageDir} />
                         <Header.Content>
                             {this.props.tokenSymbol}
                             <Header.Subheader>

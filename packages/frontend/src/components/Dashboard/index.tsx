@@ -1,25 +1,41 @@
 import * as React from 'react';
-import { Button, Dropdown, Menu } from 'semantic-ui-react';
+import { Button, Dropdown, Menu, MenuItemProps } from 'semantic-ui-react';
 
-export class Dashboard extends React.Component {
-  state = { activeItem: 'home' };
+export type UserWorflow = 'Maker' | 'Taker';
 
-  handleItemClick = (e, { name }) => this.setState({ activeItem: name });
+export interface DashboardProps {
+    activeWorkflow: UserWorflow;
+    onChangeWorkflow: (event: React.MouseEvent<HTMLAnchorElement>, data: MenuItemProps) => void;
+}
 
-  render() {
-    const { activeItem } = this.state;
+export class Dashboard extends React.Component<DashboardProps> {
 
-    return (
-      <div style={{ marginBottom: '4em' }}>
-        <Menu borderless={true} size="large" fixed="top" color="blue">
-          <Menu.Item primary="true" icon="lab" name="OXYGEN DEX"/>
-          
-          <Menu.Menu position="right">
-            <Menu.Item name="Simple" active={activeItem === 'home'} onClick={this.handleItemClick} />
-            <Menu.Item name="Expert" active={activeItem === 'messages'} onClick={this.handleItemClick} />
-          </Menu.Menu>
-        </Menu>
-      </div>
-    );
-  }
+    constructor(props: DashboardProps) {
+        super(props);
+    }
+
+    render() {
+        const activeWorkflow = this.props.activeWorkflow;
+
+        return (
+        <div style={{ marginBottom: '4em' }}>
+            <Menu borderless={true} size="large" fixed="top" color="blue">
+            <Menu.Item primary="true" icon="lab" name="OXYGEN DEX"/>
+            
+            <Menu.Menu position="right">
+                <Menu.Item 
+                    name="Order Taker" 
+                    active={activeWorkflow === 'Taker'} 
+                    onClick={this.props.onChangeWorkflow} 
+                />
+                <Menu.Item 
+                    name="Order Maker" 
+                    active={activeWorkflow === 'Maker'} 
+                    onClick={this.props.onChangeWorkflow} 
+                />
+            </Menu.Menu>
+            </Menu>
+        </div>
+        );
+    }
 }

@@ -1,7 +1,7 @@
 import * as React from 'react';
-import TokenList from '../../../components/TokenList';
+import TokenList from '../../../../components/TokenList';
 import { SyntheticEvent } from 'react';
-import { TokenAllowance } from '../../App';
+import { TokenAllowance } from '../../../App';
 import * as Web3 from 'web3';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
 import { relayerResponseJsonParsers } from '@0xproject/connect/lib/src/utils/relayer_response_json_parsers';
