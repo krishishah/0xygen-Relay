@@ -554,8 +554,8 @@ export default class TradeTokens extends React.Component<Props, State> {
         const tradeAction = this.state.tradeAction;
         const lowerBoundExchangeRate = this.state.lowerBoundExchangeRate.toPrecision(4).toString();
         const upperBoundExchangeRate = this.state.upperBoundExchangeRate.toPrecision(4).toString();
-        const lowerBoundTokenQuantity =  this.state.tokenQuantity.div(lowerBoundExchangeRate).toPrecision(4).toString();
-        const upperBoundTokenQuantity =  this.state.tokenQuantity.div(upperBoundExchangeRate).toPrecision(4).toString();
+        const lowerBoundTokenQuantity =  this.state.tokenQuantity.mul(lowerBoundExchangeRate).toPrecision(4).toString();
+        const upperBoundTokenQuantity =  this.state.tokenQuantity.mul(upperBoundExchangeRate).toPrecision(4).toString();
 
         const baseTokenDropDownItems: DropdownItemProps[] = _.chain(zeroExProxyTokens)
             .filter((token: Token) => tokensWithAllowance[token.symbol])

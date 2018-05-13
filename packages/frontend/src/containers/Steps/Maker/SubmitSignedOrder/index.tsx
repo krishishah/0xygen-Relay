@@ -2,6 +2,7 @@ import * as React from 'react';
 import { SignedOrder, ZeroEx } from '0x.js';
 import { Button, Form, ButtonProps, Segment } from 'semantic-ui-react';
 import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
+import { RelayerRestfulClient } from '../../../../api/rest';
 
 interface Props {
     signedOrder: SignedOrder | undefined;
@@ -13,11 +14,18 @@ interface State {
 }
 
 export default class SubmitSignedOrder extends React.Component<Props, State> {
+
+    relayerRestfulClient: RelayerRestfulClient | null;
+
     constructor(props: Props) {
         super(props);
     }
     
-    onClickSubmit = async (event: React.MouseEvent<HTMLButtonElement>, data: ButtonProps) => { }
+    onClickSubmit = async (event: React.MouseEvent<HTMLButtonElement>, data: ButtonProps) => {
+        if (this.relayerRestfulClient && this.props.signedOrder) {
+            this.relayerRestfulClient.postSignedOrder(this.props.signedOrder);
+        }
+     }
 
     render() {
         if (this.props.signedOrder !== undefined) {
@@ -25,6 +33,7 @@ export default class SubmitSignedOrder extends React.Component<Props, State> {
 
             return(
                 <Form style={{ height: '100%' }}>
+                    <RelayerRestfulClient ref={ref => (this.relayerRestfulClient = ref)} />
                     <Form.Field>
                         <label>Signed Order:</label>
                         <Form.TextArea 

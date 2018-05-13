@@ -10,6 +10,7 @@ import { Container } from 'typedi/Container';
 import { server as WebSocketServer } from 'websocket';
 import * as http from 'http';
 import { WebSocketHandler } from './routes/webSocket';
+import * as cors from 'cors';
 
 // Creates and configures an ExpressJS web server.
 @Service()
@@ -51,6 +52,7 @@ export class App {
         this.express.use(logger('dev'));
         this.express.use(bodyParser.json());
         this.express.use(bodyParser.urlencoded({ extended: false }));
+        this.express.use(cors());
     }
 
     // Configure API endpoints.
