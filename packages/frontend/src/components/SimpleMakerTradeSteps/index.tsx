@@ -6,6 +6,7 @@ export type SimpleMakerTradeStep = 'CreateOrder' | 'Allowance' | 'SubmitOrder';
 interface Props {
     activeStep: SimpleMakerTradeStep;
     changeStep: (newStep: SimpleMakerTradeStep) => Promise<void>;
+    isSubmitOrderDisabled: boolean;
 }
 
 export class SimpleMakerTradeStepsHeader extends React.Component<Props> {
@@ -22,7 +23,7 @@ export class SimpleMakerTradeStepsHeader extends React.Component<Props> {
         const activeStep = this.props.activeStep;
 
         return (
-            <Step.Group widths={3}>
+            <Step.Group widths={3} style={{overflow: 'visible'}}>
                 <Step id="Allowance" active={activeStep === 'Allowance'} onClick={this.changeStep}>
                     <Icon name="pencil" />
                     <Step.Content>
@@ -37,7 +38,12 @@ export class SimpleMakerTradeStepsHeader extends React.Component<Props> {
                         <Step.Description>Create and sign order using your cryptographic signature</Step.Description>
                     </Step.Content>
                 </Step>
-                <Step id="ConfirmTransaction" active={activeStep === 'SubmitOrder'} onClick={this.changeStep}>
+                <Step 
+                    disabled={this.props.isSubmitOrderDisabled} 
+                    id="SubmitOrder" 
+                    active={activeStep === 'SubmitOrder'} 
+                    onClick={this.changeStep}
+                >
                     <Icon name="check circle" />
                     <Step.Content>
                         <Step.Title>Submit Order</Step.Title>

@@ -371,6 +371,7 @@ export default class App extends React.Component<Props, State> {
                         <SimpleMakerTradeStepsHeader 
                             activeStep={this.state.activeMakerStep}
                             changeStep={this.changeMakerStep}
+                            isSubmitOrderDisabled={this.state.submitableMakerSignedOrder === undefined}
                         />
                     </Card.Header>
                 </Card.Content>
