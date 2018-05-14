@@ -544,6 +544,8 @@ export default class TradeTokens extends React.Component<Props, State> {
                 handleTxMsg('FAILURE', error.message);
             }
         }
+
+        data.active = false;
     }
 
     render() {

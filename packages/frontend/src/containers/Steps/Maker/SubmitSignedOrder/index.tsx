@@ -23,9 +23,26 @@ export default class SubmitSignedOrder extends React.Component<Props, State> {
     
     onClickSubmit = async (event: React.MouseEvent<HTMLButtonElement>, data: ButtonProps) => {
         if (this.relayerRestfulClient && this.props.signedOrder) {
-            this.relayerRestfulClient.postSignedOrder(this.props.signedOrder);
+            this.props.setTransactionMessageState(
+                'LOADING', 
+                'Thank you for waiting. Your order is currently being submitted.'
+            );
+            const success = await this.relayerRestfulClient.postSignedOrder(this.props.signedOrder);
+            if (success) {
+                this.props.setTransactionMessageState(
+                    'SUCCESS', 
+                    'Your order has been enlisted on the orderbook!'
+                );
+            } else {
+                this.props.setTransactionMessageState(
+                    'FAILURE', 
+                    'Sorry, your order cannot be enlisted at the moment. Please try again later.'
+                );
+            }
         }
-     }
+
+        data.active = false;
+    }
 
     render() {
         if (this.props.signedOrder !== undefined) {
