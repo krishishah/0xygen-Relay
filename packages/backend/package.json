@@ -32,6 +32,7 @@
   "dependencies": {
     "0x.js": "^0.36.3",
     "ajv": "^6.4.0",
+    "axios": "^0.18.0",
     "bignumber": "^1.1.0",
     "body-parser": "^1.18.2",
     "cors": "^2.8.4",

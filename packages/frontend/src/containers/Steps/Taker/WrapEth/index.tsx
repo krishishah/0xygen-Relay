@@ -10,7 +10,12 @@ import {
     Button, 
     ButtonProps,
     InputOnChangeData,
-    TextArea
+    TextArea,
+    Statistic,
+    Form,
+    ButtonGroup,
+    Segment,
+    Divider
 } from 'semantic-ui-react';
 import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
 
@@ -22,8 +27,7 @@ interface Props {
 }
 
 interface State {
-    wrapAmount: BigNumber;
-    unwrapAmount: BigNumber;
+    quantity: BigNumber;
 }
 
 export default class WrapEth extends React.Component<Props, State> {
@@ -31,8 +35,7 @@ export default class WrapEth extends React.Component<Props, State> {
     constructor(props: Props) {
         super(props);
         this.state = {
-            wrapAmount: new BigNumber(0),
-            unwrapAmount: new BigNumber(0)
+            quantity: new BigNumber(0),
         };
     }
     
@@ -41,7 +44,7 @@ export default class WrapEth extends React.Component<Props, State> {
 
         // Number of ETH to convert to WETH
         const ethToConvert = ZeroEx.toBaseUnitAmount(
-            this.state.wrapAmount,
+            this.state.quantity,
             this.props.wethToken.decimals
         );
 
@@ -63,7 +66,7 @@ export default class WrapEth extends React.Component<Props, State> {
 
         // Number of WETH to convert to ETH
         const ethToConvert = ZeroEx.toBaseUnitAmount(
-            this.state.wrapAmount,
+            this.state.quantity,
             this.props.wethToken.decimals
         );
 
@@ -80,22 +83,12 @@ export default class WrapEth extends React.Component<Props, State> {
         }
     }
 
-    onWrapQuantityChange = (event: React.SyntheticEvent<HTMLInputElement>, data: InputOnChangeData) => {
+    onQuantityChange = (event: React.SyntheticEvent<HTMLInputElement>, data: InputOnChangeData) => {
         if (data.value) {
             try {
-                this.setState({wrapAmount: new BigNumber(data.value)});
+                this.setState({quantity: new BigNumber(data.value)});
             } catch(e) {
                 console.log('Invalid Wrap Value: ' + e);
-            }
-        }
-    }
-
-    onUnwrapQuantityChange = (event: React.SyntheticEvent<HTMLInputElement>, data: InputOnChangeData) => {
-        if (data.value) {
-            try {
-                this.setState({unwrapAmount: new BigNumber(data.value)});
-            } catch(e) {
-                console.log('Invalid Unwrap Value: ' + e);
             }
         }
     }
@@ -105,54 +98,42 @@ export default class WrapEth extends React.Component<Props, State> {
         const unwrapEthIconDir = '/token_icons/unwrapEth.png';
 
         return (
-            <div>
-                <Header size="small">
-                    Wrap ETH into an ERC20-compliant Ether token. 1 ETH = 1 WETH.
+            <Form style={{ height: '100%' }}>
+                <Header size="small" textAlign="center">
+                    1 ETH = 1 WETH
+                    <Header.Subheader>
+                        Wrap ETH into an ERC20-compliant Ether token.
+                    </Header.Subheader>
                 </Header>
-                <Table basic="very" collapsing style={{width: '100%'}}>
-                    <Table.Header>
-                        <Table.Row>
-                            <Table.HeaderCell>Asset</Table.HeaderCell>
-                            <Table.HeaderCell>Quantity</Table.HeaderCell>
-                            <Table.HeaderCell>Action</Table.HeaderCell>
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                    <Table.Row >
-                        <Table.Cell image>
-                            <Image size="tiny" src={wrapEthIconDir}/>
-                        </Table.Cell>
-                        <Table.Cell style={{width: '30%'}}>
-                            <Input
-                                placeholder="ETH Quantity"
-                                onChange={this.onWrapQuantityChange}
-                            />
-                        </Table.Cell>
-                        <Table.Cell style={{width: '40%'}}>
-                            <Button onClick={this.wrapEth}>
-                                Wrap
-                            </Button>
-                        </Table.Cell>
-                    </Table.Row> 
-                    <Table.Row >
-                        <Table.Cell>
-                            <Image size="tiny" src={unwrapEthIconDir}/>
-                        </Table.Cell>
-                        <Table.Cell style={{width: '30%'}}>
-                            <Input
-                                placeholder="ETH Quantity"
-                                onChange={this.onUnwrapQuantityChange}
-                            />
-                        </Table.Cell>
-                        <Table.Cell style={{width: '40%'}}>
-                            <Button onClick={this.unwrapEth}>
-                                Unwrap
-                            </Button>
-                        </Table.Cell>
-                    </Table.Row> 
-                    </Table.Body>
-                </Table>
-            </div>
+                <div style={{display: 'flex', justifyContent: 'center'}}>
+                    <Statistic.Group>
+                        <Statistic>
+                            <Statistic.Value>
+                                <Image src={wrapEthIconDir}/>
+                            </Statistic.Value>
+                            <Statistic.Label>Wrap ETH</Statistic.Label>
+                        </Statistic>
+                        <Statistic>
+                            <Statistic.Value>
+                                <Image src={unwrapEthIconDir}/>
+                            </Statistic.Value>
+                            <Statistic.Label>Unwrap ETH</Statistic.Label>
+                        </Statistic>
+                    </Statistic.Group>
+                </div>
+                <Form.Input
+                    label="Token Quantity"
+                    required
+                    onChange={this.onQuantityChange}
+                />
+                <div style={{margin: '1em', display: 'flex', justifyContent: 'center'}}>
+                    <ButtonGroup>
+                        <Button onClick={this.wrapEth}>Wrap ETH</Button>
+                        <Button.Or />
+                        <Button onClick={this.unwrapEth}>Unwrap ETH</Button>
+                    </ButtonGroup>
+                </div>
+            </Form>
         );
     }
 }

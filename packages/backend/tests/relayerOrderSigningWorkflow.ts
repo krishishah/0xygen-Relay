@@ -1,5 +1,3 @@
-import * as ProviderEngine from 'web3-provider-engine';
-import * as FetchSubProvider from 'web3-provider-engine/subproviders/fetch';
 import { ZeroEx, SignedOrder } from '0x.js';
 import BigNumber from 'bignumber.js';
 import * as chai from 'chai';
@@ -7,18 +5,13 @@ import chaiHttp = require('chai-http');
 import { SignedOrderEntity } from '../src/entities/signedOrderEntity';
 import { SerializerUtils } from '../src/utils/serialization';
 import { SignedOrderSchema } from '../src/types/schemas';
+import Web3 from 'web3';
 
-// Configer Web3 engine.
-const engine = new ProviderEngine();
 // Compose our Providers, order matters - use the RedundantRPCSubprovider to route all other requests
-engine.addProvider(new FetchSubProvider({ rpcUrl: 'http://localhost:8545' }));
-// engine.on('block', function(block){
-//     console.log('BLOCK CHANGED:', '#' + block.number.toString('hex'), '0x' + block.hash.toString('hex'));
-// });
-engine.start();
+const provider = new Web3.providers.HttpProvider('http://localhost:8545');
 
 // Instantiate 0x.js instance
-const zeroEx = new ZeroEx(engine, {networkId: 50});
+const zeroEx = new ZeroEx(provider, {networkId: 50});
 
 // Number of decimals to use (for ETH and ZRX)
 const DECIMALS = 18;
