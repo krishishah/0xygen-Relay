@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Button, Dropdown, Menu, Step, Icon, StepProps } from 'semantic-ui-react';
 
-export type SimpleTakerTradeStep = 'Trade' | 'Allowance' | 'ConfirmTransaction';
+export type SimpleTakerTradeStep = 'WrapEth' | 'Trade' | 'Allowance';
 
 interface Props {
     activeStep: SimpleTakerTradeStep;
@@ -23,6 +23,13 @@ export class SimpleTakerTradeStepsHeader extends React.Component<Props> {
 
         return (
             <Step.Group widths={3} style={{overflow: 'visible'}}>
+                <Step id="WrapEth" active={activeStep === 'WrapEth'} onClick={this.changeStep}>
+                    <Icon name="gift" />
+                    <Step.Content>
+                        <Step.Title>Wrap ETH</Step.Title>
+                        <Step.Description>Convert your ETH into an ERC20 compliant Ether token</Step.Description>
+                    </Step.Content>
+                </Step>
                 <Step id="Allowance" active={activeStep === 'Allowance'} onClick={this.changeStep}>
                     <Icon name="pencil" />
                     <Step.Content>
@@ -35,13 +42,6 @@ export class SimpleTakerTradeStepsHeader extends React.Component<Props> {
                     <Step.Content>
                         <Step.Title>Trade</Step.Title>
                         <Step.Description>Exchange tokens at a given rate</Step.Description>
-                    </Step.Content>
-                </Step>
-                <Step id="ConfirmTransaction" active={activeStep === 'ConfirmTransaction'} onClick={this.changeStep}>
-                    <Icon name="check circle" />
-                    <Step.Content>
-                        <Step.Title>Confirm Transaction</Step.Title>
-                        <Step.Description>Transaction receipt</Step.Description>
                     </Step.Content>
                 </Step>
             </Step.Group>

@@ -57,7 +57,7 @@ export default class Account extends React.Component<Props, {}> {
             return (
                 <div>
                     <h2 style={{textAlign: 'center'}}>WALLET</h2>
-                    <List size="large">
+                    <List size="medium">
                         <List.Item>
                             <Image avatar src={imageSrc}/>
                             <List.Content>
@@ -68,10 +68,9 @@ export default class Account extends React.Component<Props, {}> {
                         <List.Item>
                             <Image 
                                 avatar 
-                                src="https://www.shareicon.net/data/128x128/2016/07/08/117398_eth_512x512.png"
+                                src="/token_icons/ETH.png"
                             />
                             <List.Content>
-                            
                                 <List.Header>Balance:</List.Header>
                                 <List.Description>{etherBalance} ETH</List.Description>
                             </List.Content>

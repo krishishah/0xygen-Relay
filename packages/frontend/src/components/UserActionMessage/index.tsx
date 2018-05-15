@@ -34,8 +34,9 @@ export class UserActionMessage extends React.Component<UserActionMessageProps> {
                     <Message success attached="top" onDismiss={this.props.dismissMessage}>
                         <Message.Content>
                             <Message.Header>Trade Successful!</Message.Header>
+                            Transaction Receipt: 
                             <a href={`https://kovan.etherscan.io/tx/${message}`}>
-                                Transaction Receipt: https://kovan.etherscan.io/tx/${message}
+                                https://kovan.etherscan.io/tx/${message}
                             </a>
                         </Message.Content>
                     </Message>

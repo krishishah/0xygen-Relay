@@ -539,7 +539,10 @@ export default class TradeTokens extends React.Component<Props, State> {
                     true, 
                     takerAddress
                 );
-                handleTxMsg('TRADE_SUCCESS', txMsg);
+
+                const txReceipt = await this.props.zeroEx.awaitTransactionMinedAsync(txMsg);
+
+                handleTxMsg('TRADE_SUCCESS', txReceipt.transactionHash);
             } catch (error) {
                 handleTxMsg('FAILURE', error.message);
             }

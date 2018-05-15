@@ -21,7 +21,7 @@ export class BalanceTableRow extends React.Component<Props, State> {
         return (
             <Table.Row >
                 <Table.Cell>
-                    <Header as="h4" image>
+                    <Header as="h5" image>
                         <Image src={tokenImageDir} />
                         <Header.Content>
                             {this.props.tokenSymbol}

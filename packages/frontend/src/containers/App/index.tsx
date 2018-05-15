@@ -13,9 +13,9 @@ import { Dictionary } from 'lodash';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import SetAllowances from '../Steps/Shared/SetAllowances';
 import TradeTokens from '../Steps/Taker/TradeTokens';
+import WrapEth from '../Steps/Taker/WrapEth';
 import CreateOrder from '../Steps/Maker/CreateOrder';
 import SubmitSignedOrder from '../Steps/Maker/SubmitSignedOrder';
-
 import { 
     UserActionMessage, 
     UserActionMessageProps,
@@ -132,7 +132,7 @@ export default class App extends React.Component<Props, State> {
             setInterval(() => {
                 this.fetchAccountDetailsAsync();
             // tslint:disable-next-line:align
-            }, 3000);
+            }, 1000);
         }
     }
 
@@ -359,7 +359,13 @@ export default class App extends React.Component<Props, State> {
             <Card 
                 raised={true} 
                 centered={true} 
-                style={{ padding: '1em 1em 1em 1em', margin: '4em 0em 4em 0em', minWidth: '1100px'}}
+                style={{ 
+                    padding: '1em 1em 1em 1em', 
+                    marginTop: '0px !important', 
+                    marginLeft: 'auto', 
+                    marginRight: 'auto',
+                    minWidth: '1000px'
+                }}
             >  
                 <UserActionMessage 
                     status={this.state.transactionMessage.status} 
@@ -404,6 +410,8 @@ export default class App extends React.Component<Props, State> {
         let takerStepToRender;
         let activeTakerStep = this.state.activeTakerStep;
 
+        const wethTokenIndex = this.state.zeroExRegistryTokens.findIndex(x => x.symbol === 'WETH');
+
         switch (activeTakerStep) {
             case 'Allowance': {
                 takerStepToRender = (
@@ -431,6 +439,17 @@ export default class App extends React.Component<Props, State> {
                 );
                 break;
             }
+            case 'WrapEth': {
+                takerStepToRender = (
+                    <WrapEth 
+                        zeroEx={this.zeroEx}
+                        setTransactionMessageState={this.setTransactionMessageState}
+                        accounts={this.state.accounts}
+                        wethToken={this.state.zeroExRegistryTokens[wethTokenIndex]}
+                    />
+                );
+                break;
+            }
             default:
                 break;
         }
@@ -439,7 +458,13 @@ export default class App extends React.Component<Props, State> {
             <Card 
                 raised={true} 
                 centered={true} 
-                style={{ padding: '1em 1em 1em 1em', margin: '4em 0em 4em 0em', minWidth: '1100px'}}
+                style={{ 
+                    padding: '1em 1em 1em 1em', 
+                    marginTop: '0px !important', 
+                    marginLeft: 'auto', 
+                    marginRight: 'auto',
+                    minWidth: '1000px'
+                }}
             >  
                 <UserActionMessage 
                     status={this.state.transactionMessage.status} 
