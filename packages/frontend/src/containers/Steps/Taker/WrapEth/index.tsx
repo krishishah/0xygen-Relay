@@ -98,7 +98,7 @@ export default class WrapEth extends React.Component<Props, State> {
         const unwrapEthIconDir = '/token_icons/unwrapEth.png';
 
         return (
-            <Form style={{ height: '100%' }}>
+            <Form style={{ height: '100%'}}>
                 <Header size="small" textAlign="center">
                     1 ETH = 1 WETH
                     <Header.Subheader>
