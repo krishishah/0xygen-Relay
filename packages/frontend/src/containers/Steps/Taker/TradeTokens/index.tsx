@@ -1,15 +1,13 @@
 import * as React from 'react';
 import { promisify } from '@0xproject/utils';
-import { ZeroEx } from '0x.js/lib/src/0x';
 import Faucet from '../../../../components/Faucet';
-import { Token, OrderState } from '0x.js';
+import { Token, OrderState, BlockParamLiteral, SignedOrder, ZeroEx } from '0x.js';
 import { Dictionary } from 'lodash';
 import { TokenAllowance } from '../../../App';
 import * as _ from 'lodash';
 import { RelayerWebSocketChannel } from '../../../../api/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
 import { SerializerUtils } from '../../../../utils';
-import { SignedOrder } from '@0xproject/types';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
 import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
@@ -40,6 +38,7 @@ import {
     Label,
     ButtonProps
 } from 'semantic-ui-react';
+import { OrderStateWatcher } from '0x.js/lib/src/order_watcher/order_state_watcher';
 
 export type TradeAction = 'Buy' | 'Sell';
 
@@ -64,12 +63,17 @@ interface State {
 export default class TradeTokens extends React.Component<Props, State> {
 
     relayerWsChannel: RelayerWebSocketChannel | null;
+    orderStateWatcher: OrderStateWatcher;
 
     // Sets maintain insertion order
     ordersToFill: Map<string, SignedOrder>;
     
     constructor(props: Props) {
         super(props);
+
+        this.orderStateWatcher = this.props.zeroEx.createOrderStateWatcher({
+            stateLayer: BlockParamLiteral.Latest
+        });
 
         this.state = {
             tradeAction: 'Buy',
@@ -87,7 +91,7 @@ export default class TradeTokens extends React.Component<Props, State> {
             this.relayerWsChannel.closeConnection();
         }
         try {
-            this.props.zeroEx.orderStateWatcher.unsubscribe();
+            this.orderStateWatcher.unsubscribe();
         } catch (e) {
             console.log('TradeTokens componentWillUnmount error: ', e.message);
         }
@@ -104,13 +108,13 @@ export default class TradeTokens extends React.Component<Props, State> {
 
     handleTokenQuantityChange = async (e, { value }) => {
         const previousState = Object.assign({}, this.state.tokenQuantity);
-        if (value !== null) {
+        if (value) {
             try {
                 await this.setState( { tokenQuantity: new BigNumber(value) } );
                 if (!previousState) {
                     this.onPropertyChanged();
                 } else {
-                    this.calculateRateRange();
+                    await this.calculateRateRange();
                 }
             } catch( e ) {
                 console.log(e);
@@ -159,23 +163,30 @@ export default class TradeTokens extends React.Component<Props, State> {
 
     onRelayerSnapshot = async (snapshot: WebSocketMessage<OrderbookSnapshot>, tokenPair: TokenPair) => {
         const tokenPairOrderbook = SerializerUtils.TokenPairOrderbookFromJSON(snapshot.payload);
-        
+        const takerAddress = this.props.accounts[0];
+
         // Log number of bids and asks currently in the orderbook
         const numberOfBids = tokenPairOrderbook.bids.length;
         const numberOfAsks = tokenPairOrderbook.asks.length;
         console.log(`SNAPSHOT: ${numberOfBids} bids & ${numberOfAsks} asks`);
 
+        // Filter orders which takerAddress == order.maker
+        tokenPairOrderbook.asks = tokenPairOrderbook.asks.filter((order: SignedOrder) => {
+            return order.maker !== takerAddress;
+        });
+
+        tokenPairOrderbook.bids = tokenPairOrderbook.bids.filter((order: SignedOrder) => {
+            return order.maker !== takerAddress;
+        });
+
         // Enrich
-        const enrichedOrderbook = this.validateAndEnrichOrderbook(tokenPairOrderbook);
+        const enrichedOrderbook = await this.validateAndEnrichOrderbook(tokenPairOrderbook);
 
         // Sort bids and asks in order of best rates
-        enrichedOrderbook.bids.sort(this.sortEnrichedAsks);
-        enrichedOrderbook.asks.sort(this.sortEnrichedAsks);
+        enrichedOrderbook.bids = enrichedOrderbook.bids.sort(this.sortEnrichedBids);
+        enrichedOrderbook.asks = enrichedOrderbook.asks.sort(this.sortEnrichedAsks);
 
-        await this.setState({ enrichedOrderbook });
-
-        await this.calculateRateRange();
-
+        this.setState({ enrichedOrderbook }, this.calculateRateRange);
     }
 
     sortEnrichedBids = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
@@ -244,26 +255,37 @@ export default class TradeTokens extends React.Component<Props, State> {
         );
     }
 
-    validateAndEnrichOrderbook(orderbook: TokenPairOrderbook): EnrichedTokenPairOrderbook {
+    async validateAndEnrichOrderbook(orderbook: TokenPairOrderbook): Promise<EnrichedTokenPairOrderbook> {
         let enrichedBids: EnrichedSignedOrder[] = [];
         let enrichedAsks: EnrichedSignedOrder[] = [];
 
-        orderbook.bids.map(order => {
-            this.validateAndEnrichSignedOrder(order)
-                .then(enrichedOrder => enrichedBids.push(enrichedOrder))
-                .catch(e => console.log(`Invalid Order Error ${e.message}`));
-        });
+        for (let x = 0; x < orderbook.asks.length; x++) {
+            let order: SignedOrder = orderbook.asks[x];
+            try {
+                let enrichedOrder: EnrichedSignedOrder = await this.validateAndEnrichSignedOrder(order);
+                enrichedAsks.push(enrichedOrder);
+            } catch(e) {
+                console.log(`Invalid Order Error ${e.message}`);
+            }
+        }
 
-        orderbook.asks.map(order => {
-            this.validateAndEnrichSignedOrder(order)
-                .then(enrichedOrder => enrichedAsks.push(enrichedOrder))
-                .catch(e => console.log(`Invalid Order Error ${e.message}`));
-        });
+        for (let x = 0; x < orderbook.bids.length; x++) {
+            let order: SignedOrder = orderbook.bids[x];
+            try {
+                let enrichedOrder: EnrichedSignedOrder = await this.validateAndEnrichSignedOrder(order);
+                enrichedBids.push(enrichedOrder);
+            } catch(e) {
+                console.log(`Invalid Order Error ${e.message}`);
+            }
+        }
 
         const enrichedTokenPairOrderbook: EnrichedTokenPairOrderbook = {
             bids: enrichedBids,
             asks: enrichedAsks
         };
+
+        console.log(`ENRICHED: ${enrichedBids.length} bids & ${enrichedAsks.length} asks`);
+
         return enrichedTokenPairOrderbook;
     }
 
@@ -378,14 +400,14 @@ export default class TradeTokens extends React.Component<Props, State> {
             )
             .then((success: boolean) => {
                 if (!success) {
-                    return this.props.zeroEx.orderStateWatcher.removeOrder(orderState.orderHash);
+                    return this.orderStateWatcher.removeOrder(orderState.orderHash);
                 } else {
                     return this.calculateRateRange();
                 }
             });
         } else if (orderState && !orderState.isValid) {
             // Invalid OrderState or non existent OrderState with Error
-            this.props.zeroEx.orderStateWatcher.removeOrder(orderState.orderHash);
+            this.orderStateWatcher.removeOrder(orderState.orderHash);
 
             // Remove order && recalculate rates
             this.removeOrderFromEnrichedOrderbook(orderState.orderHash)
@@ -408,7 +430,8 @@ export default class TradeTokens extends React.Component<Props, State> {
             quoteToken && 
             tokenQuantity.greaterThan(0) &&
             tradeAction === 'Buy' && 
-            enrichedOrderbook !== undefined
+            enrichedOrderbook &&
+            (enrichedOrderbook.asks.length > 0 || enrichedOrderbook.bids.length > 0)
         ) {
             const asks: EnrichedSignedOrder[] = enrichedOrderbook.asks;
 
@@ -444,9 +467,7 @@ export default class TradeTokens extends React.Component<Props, State> {
                     let baseTokenQuantityToFill = tokenQuantity.minus(lowerBoundBaseTokenQuantity);
                     let orderRate = takerTokenAmount.div(makerTokenAmount);
                     
-                    baseTokenQuantityToFill = baseTokenQuantityToFill.lessThan(makerTokenAmount)
-                    ? lowerBoundBaseTokenQuantity.add(baseTokenQuantityToFill)
-                    : lowerBoundBaseTokenQuantity.add(makerTokenAmount);
+                    baseTokenQuantityToFill = BigNumber.min(baseTokenQuantityToFill, makerTokenAmount);
 
                     lowerBoundBaseTokenQuantity = lowerBoundBaseTokenQuantity.add(baseTokenQuantityToFill);
 
@@ -483,10 +504,8 @@ export default class TradeTokens extends React.Component<Props, State> {
                     console.log(`upper bound signed order: ${JSON.stringify(enrichedOrder)}`);
                     let baseTokenQuantityToFill = tokenQuantity.minus(upperBoundBaseTokenQuantity);
                     let orderRate = takerTokenAmount.div(makerTokenAmount);
-                    
-                    baseTokenQuantityToFill = baseTokenQuantityToFill.lessThan(makerTokenAmount)
-                    ? upperBoundBaseTokenQuantity.add(baseTokenQuantityToFill)
-                    : upperBoundBaseTokenQuantity.add(makerTokenAmount);
+
+                    baseTokenQuantityToFill = BigNumber.min(baseTokenQuantityToFill, makerTokenAmount);
 
                     upperBoundBaseTokenQuantity = upperBoundBaseTokenQuantity.add(baseTokenQuantityToFill);
 
@@ -527,7 +546,7 @@ export default class TradeTokens extends React.Component<Props, State> {
         ) {
             handleTxMsg('LOADING');
             
-            const orderArray = Array.from(this.ordersToFill.values());
+            const orderArray: SignedOrder[] = Array.from(this.ordersToFill.values());
             
             console.log('signed orders to fill:' + JSON.stringify(orderArray));
             console.log('Order fill amount:' + fillQuantity);
@@ -547,8 +566,7 @@ export default class TradeTokens extends React.Component<Props, State> {
                 handleTxMsg('FAILURE', error.message);
             }
         }
-
-        data.active = false;
+        // data.active = false;
     }
 
     render() {

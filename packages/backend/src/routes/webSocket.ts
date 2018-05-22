@@ -23,7 +23,6 @@ import {
     OrderbookSnapshot, 
     Subscribe 
 } from '../types/schemas';
-import { ServerClient } from '../utils/serverClient';
 import { Container } from 'typedi/Container';
 import { App } from '../app';
 

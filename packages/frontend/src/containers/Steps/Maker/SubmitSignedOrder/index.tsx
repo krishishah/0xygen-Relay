@@ -41,7 +41,7 @@ export default class SubmitSignedOrder extends React.Component<Props, State> {
             }
         }
 
-        data.active = false;
+        // data.active = false;
     }
 
     render() {

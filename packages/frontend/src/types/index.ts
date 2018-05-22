@@ -1,6 +1,4 @@
-import { ECSignature, OrderRelevantState } from '0x.js/lib/src/types';
-import { Token } from '0x.js';
-import { SignedOrder } from '@0xproject/types';
+import { Token, ECSignature, SignedOrder } from '0x.js';
 import { BigNumber } from 'bignumber.js';
 
 type Address = string;

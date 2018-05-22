@@ -71,3 +71,6 @@ dist
 
 # Visual Studio Code Temp files
 .vscode/
+
+# Private / Public Keys
+*.pem

@@ -1,15 +1,13 @@
 import * as React from 'react';
 import { promisify } from '@0xproject/utils';
-import { ZeroEx } from '0x.js/lib/src/0x';
 import Faucet from '../../../../components/Faucet';
-import { Token, OrderState, ECSignature } from '0x.js';
+import { Token, OrderState, ECSignature, SignedOrder, Order, ZeroEx } from '0x.js';
 import { Dictionary } from 'lodash';
 import { TokenAllowance } from '../../../App';
 import * as _ from 'lodash';
 import { RelayerWebSocketChannel } from '../../../../api/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
 import { SerializerUtils } from '../../../../utils';
-import { SignedOrder, Order } from '@0xproject/types';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
 import { UserActionMessageStatus } from '../../../../components/UserActionMessage';

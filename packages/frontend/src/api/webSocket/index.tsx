@@ -27,8 +27,8 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
         };
     }
 
-    componentDidMount() {
-        this.initialiseConnection();
+    async componentDidMount() {
+        await this.initialiseConnection();
     }
 
     initialiseConnection = async () => {
@@ -45,7 +45,7 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
                 });
             };
                 
-            this.webSocket.onmessage = (message: MessageEvent) => this.handleWebSocketMessage(message);
+            this.webSocket.onmessage = async (message: MessageEvent) => await this.handleWebSocketMessage(message);
 
             this.webSocket.onclose = () => {
                 console.log('Relayer disconnected, attempting to reconnect');
@@ -61,20 +61,20 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
         console.log('sent message: %s', payload);   
     }
 
-    handleWebSocketMessage = (message: MessageEvent) => {
+    handleWebSocketMessage = async (message: MessageEvent) => {
         console.log('[client](message): %s', message.data);   
         if (message !== undefined) {
             const parsedMessage = JSON.parse(message.data);
-            this.handleOrderbookEvent(parsedMessage);
+            await this.handleOrderbookEvent(parsedMessage);
         }
     }
 
-    handleOrderbookEvent = (orderbookEvent) => {
+    handleOrderbookEvent = async (orderbookEvent) => {
         switch (orderbookEvent.type) {
             case 'snapshot':
                 const orderbookSnapshotEvent = orderbookEvent as WebSocketMessage<OrderbookSnapshot>;
                 console.log('got a snapshot orderbook event', orderbookSnapshotEvent);
-                this.props.onSnapshot(
+                await this.props.onSnapshot(
                     orderbookSnapshotEvent, 
                     this.state.subscriptionIdMap.get(orderbookSnapshotEvent.requestId) as TokenPair
                 );
@@ -82,7 +82,7 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
             case 'update':
                 const orderbookUpdateEvent = orderbookEvent as WebSocketMessage<OrderbookUpdate>;
                 console.log('got a update orderbook event', orderbookUpdateEvent);
-                this.props.onUpdate(
+                await this.props.onUpdate(
                     orderbookUpdateEvent,
                     this.state.subscriptionIdMap.get(orderbookUpdateEvent.requestId) as TokenPair
                 );
@@ -127,11 +127,6 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
 
     closeConnection = async () => {
         await this.webSocket.close();
-        
-        await this.setState({
-            subscriptionCount: 0,
-            subscriptionIdMap: new Map<number, TokenPair>()
-        });
     }
 
     componentWillUnmount() {

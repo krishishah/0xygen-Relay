@@ -2,11 +2,12 @@ import axios, { AxiosRequestConfig, AxiosPromise, AxiosResponse, AxiosError } fr
 import * as jwt from 'jsonwebtoken';
 import Web3 from 'web3';
 import base64url from 'base64url';
+import * as fs from 'fs';
 
 const LIQUIDITY_NETWORK_HOST: string = 'https://wallet.liquidity.network/';
-const LIQUIDITY_CREATE_PAYMENT = '/payment';
-const LIQUIDITY_AUTHORISE_PAYMENT_URI = (uuid: string) => `/payment/authorize/${uuid}`;
-const LIQUIDITY_EXECUTE_AUTORISED_PAYMENT_URI = (uuid: string) => `/payment/execute/${uuid}`;
+
+const privateKey = fs.readFileSync(__dirname + '../../../ecdsa-p521-private.pem');
+const publicKey = fs.readFileSync(__dirname + '../../../ecdsa-p521-public.pem');
 
 const provider = new Web3.providers.HttpProvider('http://localhost:8545');
 var web3 = new Web3(provider);
@@ -17,9 +18,9 @@ export interface AccountTokenRequest {
 }
 
 export interface AccountIdPublicKeyUserTriple {
-    id: string;
+    id: number;
     public_key: string;
-    user: string;
+    user: number;
 }
 
 export interface AcountTokenResponse {
@@ -27,6 +28,7 @@ export interface AcountTokenResponse {
 }
 
 //////////////////////////////// STEP 1: REGISTER /////////////////////////////////////////////////////
+
 const LIQUIDITY_REGISTER_ACCOUNT_URI = '/account/register';
 
 export interface RegisterAccountRequest {
@@ -42,7 +44,7 @@ export interface RegisterAccountResponse {
     first_name: string;
     last_name: string;
     email: string;
-    id: string;
+    id: number;
 }
 
 const registerAccount = (registerAccountRequest: RegisterAccountRequest): Promise<RegisterAccountResponse> => {
@@ -53,7 +55,27 @@ const registerAccount = (registerAccountRequest: RegisterAccountRequest): Promis
     );
 };
 
-/////////////////////////// AUTHENTICATION ////////////////////////////////////
+//////////////////////////////// ADD TOKEN /////////////////////////////////////////////////////
+
+const LIQUIDITY_ADD_TOKEN_URI = '/account/register';
+
+export interface AddTokenRequest {
+    username: string;
+    password: string;
+    public_key: string;
+}
+
+export type AddTokenResponse = AccountIdPublicKeyUserTriple;
+
+const addToken = (addTokenRequest: AddTokenRequest): Promise<AddTokenResponse> => {
+    return axios.post(`${LIQUIDITY_NETWORK_HOST}${LIQUIDITY_ADD_TOKEN_URI}`, addTokenRequest)
+        .then((value: AxiosResponse<AddTokenResponse>) => {
+            return value.data;
+        }
+    );
+};
+
+//////////////////////////////// AUTHENTICATION ////////////////////////////////////////
 
 export interface TokenHeader {
     alg: string;
@@ -63,11 +85,10 @@ export interface TokenHeader {
 export interface TokenPayload {
     key_id: number;
     exp: number;
-    scope: { };
 }
 
 const LIQUIDITY_TOKEN_HEADER: TokenHeader = {
-    alg: 'ES256',
+    alg: 'ES512',
     typ: 'JWT'
 };
 
@@ -76,15 +97,8 @@ const encodeObj = (obj: Object): string => {
     return base64url.encode(Buffer.from(jsonObj));
 };
 
-const signObj = (obj: string): string => {
-    return web3.eth.sign(obj, web3.eth.accounts[0], (err, res) => {
-        if (err) {
-            // tslint:disable-next-line:no-console
-            console.log(err);
-        } else {
-            return res;
-        }
-    });
+const signObj = (tokenPayload: TokenPayload): string => {
+    return jwt.sign(tokenPayload, privateKey, { algorithm: 'ES512'});
 };
 
 const generateJwt = (header: string, payload: string, signature: string): string => {
@@ -106,8 +120,8 @@ export interface MerchantRequest {
 }
 
 export interface MerchantResponse extends MerchantRequest {
-    id: string;
-    user: string;
+    id: number;
+    user: number;
     address2: string;
     address3: string;
     phone_number2: string;
@@ -131,7 +145,7 @@ const addMerchantInformation = (merchantInfo: MerchantRequest, jsonWebToken: str
     );
 };
 
-//////////////////////////////// EXECUTE PAYMENT /////////////////////////////////////////////////////
+//////////////////////////////// CREATE PAYMENT /////////////////////////////////////////////////////
 
 const LIQUIDITY_PAYMENT_URI = '/payment';
 
@@ -168,6 +182,55 @@ const createPayment = (paymentReq: CreatePaymentRequest, jsonWebToken: string): 
     return axios.post(`${LIQUIDITY_NETWORK_HOST}${LIQUIDITY_PAYMENT_URI}`, paymentReqJson, config)
         .then((value: AxiosResponse<CreatePaymentResponse>) => {
             return value.data;
+        }
+    );
+};
+
+//////////////////////////////// AUTHORISE PAYMENT /////////////////////////////////////////////////////
+
+const LIQUIDITY_AUTHORISE_PAYMENT_URI = (uuid: string) => `/payment/authorize/${uuid}`;
+
+export interface AuthorisePaymentRequest {
+    authorization_nonce: number;
+    authorization_round: number;
+    authorization: string;
+    balance_authorization: string;
+}
+
+export interface AuthorisePaymentResponse {
+
+}
+
+const authorisePayment = (uuid: string, authReq: AuthorisePaymentRequest): Promise<string> => {
+
+    const authReqJson: string = JSON.stringify(authReq);
+
+    return axios.post(`${LIQUIDITY_NETWORK_HOST}${LIQUIDITY_AUTHORISE_PAYMENT_URI(uuid)}`, authReqJson)
+        .then((value: AxiosResponse) => {
+            return value.statusText;
+        }
+    );
+};
+
+////////////////////////////////////// EXECUTE PAYMENT /////////////////////////////////////////////////////
+
+const LIQUIDITY_EXECUTE_AUTORISED_PAYMENT_URI = (uuid: string) => `/payment/execute/${uuid}`;
+
+export interface ExecutePaymentRequest {
+    receipt: string;
+}
+
+export interface ExecutePaymentResponse {
+
+}
+
+const executePayment = (uuid: string, executeReq: ExecutePaymentRequest): Promise<string> => {
+
+    const execReqJson: string = JSON.stringify(executeReq);
+
+    return axios.post(`${LIQUIDITY_NETWORK_HOST}${LIQUIDITY_EXECUTE_AUTORISED_PAYMENT_URI(uuid)}`, execReqJson)
+        .then((value: AxiosResponse) => {
+            return value.statusText;
         }
     );
 };

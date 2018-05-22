@@ -16,7 +16,7 @@ export class V0RestApiRouter {
     /**
      * Initialize the RestApiRouter
      */
-    constructor(private orderService: OrderService, private wsHandler: WebSocketHandler) {
+    constructor(private orderService: OrderService) {
         this.router = Router();
         this.init();
     }

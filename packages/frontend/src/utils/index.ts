@@ -1,7 +1,7 @@
-import { SignedOrder, OrderRelevantState } from '0x.js/lib/src/types';
 import { BigNumber } from 'bignumber.js';
-import { ECSignature } from '0x.js';
+import { ECSignature, SignedOrder } from '0x.js';
 import { SignedOrderSchema, TokenPairOrderbookSchema, TokenPairOrderbook, OrderRelevantStateSchema } from '../types';
+import { OrderRelevantState } from '0x.js/lib/src/types';
 
 export class SerializerUtils {
 
