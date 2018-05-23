@@ -32,7 +32,8 @@ import {
     DropdownItemProps, 
     Message,
     GridColumn,
-    MenuItemProps
+    MenuItemProps,
+    Button
 } from 'semantic-ui-react';
 import { 
     InjectedWeb3Subprovider, 
@@ -60,6 +61,8 @@ import {
     TEST_RPC, 
     TEST_RPC_NETWORK_ID 
 } from '../../config';
+import { PaymentNetworkRestfulClient } from '../../api/paymentNetworkRest';
+import { OffChainTokenBalances } from '../../types';
 
 const Web3ProviderEngine = require('web3-provider-engine');
 
@@ -77,7 +80,8 @@ interface Props {}
 
 interface State {
     accounts: string[];
-    tokenBalances: Dictionary<TokenBalance>;
+    onChainTokenBalances: Dictionary<TokenBalance>;
+    offChainTokenBalances: Dictionary<TokenBalance>;
     etherBalance: BigNumber;
     activeTakerStep: SimpleTakerTradeStep;
     activeMakerStep: SimpleMakerTradeStep;
@@ -93,15 +97,17 @@ export default class App extends React.Component<Props, State> {
     providerEngine: any;
     zeroEx: ZeroEx;
     web3Wrapper: Web3Wrapper;
+    paymentNetworkRestClient: PaymentNetworkRestfulClient | null;
 
     constructor(props: Props) {
         super(props);
 
         this.state = { 
             accounts: [''], 
-            tokenBalances: {},
+            onChainTokenBalances: {},
+            offChainTokenBalances: {},
             etherBalance: new BigNumber(0),
-            activeTakerStep: 'Allowance',
+            activeTakerStep: 'WrapEth',
             activeMakerStep: 'Allowance',
             tokensWithAllowances: {},
             zeroExRegistryTokens: [],
@@ -150,9 +156,7 @@ export default class App extends React.Component<Props, State> {
             return;
         }
 
-        const userTokenBalances = {};
-        
-        // Fetch all the Balances for all of the tokens in the Token Registry
+        // Fetch all the on-chain Balances for all of the tokens in the Token Registry
         const allTokenRegistryBalancesAsync = _.map(tokens, async (token: Token): Promise<TokenBalance> => {
             try {
                 const balance = await this.zeroEx.token.getBalanceAsync(token.address, address);
@@ -164,21 +168,59 @@ export default class App extends React.Component<Props, State> {
             }
         });
 
-        const allTokenRegistryBalances = await Promise.all(allTokenRegistryBalancesAsync);
+        const allOnChainTokenRegistryBalances = await Promise.all(allTokenRegistryBalancesAsync);
+
+        const onChainTokenBalances = {};
 
         // Convert all of the Units into more Human Readable numbers
         // Many ERC20 tokens go to 18 decimal places
-        _.each(allTokenRegistryBalances, (tokenBalance: TokenBalance) => {
+        _.each(allOnChainTokenRegistryBalances, (tokenBalance: TokenBalance) => {
             if (tokenBalance.balance && tokenBalance.balance.gt(0)) {
                 tokenBalance.balance = ZeroEx.toUnitAmount(
                     tokenBalance.balance,
                     tokenBalance.token.decimals
                 );
-                userTokenBalances[tokenBalance.token.symbol] = tokenBalance;
+                onChainTokenBalances[tokenBalance.token.symbol] = tokenBalance;
             }
         });
 
-        // Fetch the Balance in Ether
+        // Fetch all the off-chain Balances for all of the tokens in the Token Registry
+        let offChainTokenBalances: OffChainTokenBalances;
+
+        if (this.paymentNetworkRestClient) {
+            offChainTokenBalances = await this.paymentNetworkRestClient.getBalances(address);
+        } else {
+            offChainTokenBalances = {
+                userAddress: address,
+                tokenBalances: new Map()
+            };
+        }
+        
+        const allOffChainTokenRegistryBalances: TokenBalance[] = _.map(tokens, (token: Token) => {
+            const balance = offChainTokenBalances.tokenBalances.get(token.address);
+            
+            if (balance) {
+                return { token: token, balance: balance };
+            } else {
+                return { token: token, balance: new BigNumber(0) };
+            }
+        });
+
+        let offChainTokenBalanceDict = {};
+
+        // Convert all of the Units into more Human Readable numbers
+        // Many ERC20 tokens go to 18 decimal places
+        _.each(allOffChainTokenRegistryBalances, (tokenBalance: TokenBalance) => {
+            if (tokenBalance.balance && tokenBalance.balance.gt(0)) {
+                tokenBalance.balance = ZeroEx.toUnitAmount(
+                    tokenBalance.balance,
+                    tokenBalance.token.decimals
+                );
+                offChainTokenBalanceDict[tokenBalance.token.symbol] = tokenBalance;
+            }
+        });
+
+        // Fetch the Balance of Ether
         try {
             let ethBalance = await this.web3Wrapper.getBalanceInWeiAsync(address);
             
@@ -192,9 +234,12 @@ export default class App extends React.Component<Props, State> {
             console.log(e);
         }
 
-        // Update the state in React
-        this.setState((prev, props) => {
-            return { ...prev, tokenBalances: userTokenBalances, accounts: addresses };
+        console.log(offChainTokenBalanceDict);
+
+        await this.setState({
+            onChainTokenBalances: onChainTokenBalances,
+            offChainTokenBalances: offChainTokenBalanceDict,
+            accounts: addresses,
         });
     }
 
@@ -391,7 +436,8 @@ export default class App extends React.Component<Props, State> {
                         <Card.Content>
                             <Account 
                                 accounts={this.state.accounts}
-                                tokenBalances={this.state.tokenBalances}
+                                onChainTokenBalances={this.state.onChainTokenBalances}
+                                offChainTokenBalances={this.state.offChainTokenBalances}
                                 etherBalance={this.state.etherBalance}
                                 fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
                             />
@@ -489,7 +535,8 @@ export default class App extends React.Component<Props, State> {
                         <Card.Content>
                             <Account 
                                 accounts={this.state.accounts}
-                                tokenBalances={this.state.tokenBalances}
+                                onChainTokenBalances={this.state.onChainTokenBalances}
+                                offChainTokenBalances={this.state.offChainTokenBalances}
                                 etherBalance={this.state.etherBalance}
                                 fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
                             />
@@ -515,10 +562,27 @@ export default class App extends React.Component<Props, State> {
 
             return (
                 <Container>
+                    <PaymentNetworkRestfulClient
+                        ref={ref => (this.paymentNetworkRestClient = ref)} 
+                    />
                     <Dashboard
                         activeWorkflow={this.state.activeUserWorkflow}
                         onChangeWorkflow={this.onChangeWorkflow}
                     />
+                    <Grid 
+                        centered={true} 
+                        style={{ 
+                            padding: '2em 1em 2em 1em', 
+                            marginTop: '0px !important', 
+                            marginLeft: 'auto', 
+                            marginRight: 'auto',
+                        }}
+                    >
+                        <Button.Group size="large">
+                            <Button color="grey" content="Blue">On-Chain</Button>
+                            <Button basic color="grey" content="Black">Off-Chain</Button>
+                        </Button.Group>
+                    </Grid>
                     {userWorkflow}
                 </Container>
             );

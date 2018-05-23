@@ -1,0 +1,30 @@
+version: '2'
+services:
+  server:
+    build:
+      image: node:9.3.0
+
+    ports:
+      - 3000:3000
+    volumes:
+     - .:/src
+    links:
+      - db
+    depends_on:
+      - db
+    environment:
+      PORT: '3000'
+      PGUSER: 'test'
+      PGPASSWORD: 'test'
+      PGDATABASE: 'test'
+      PGHOST: 'db'
+      PGPORT: '5432'
+
+  db:
+    image: postgres:10.1
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: 'test'
+      POSTGRES_PASSWORD: 'test'
+      POSTGRES_DB: 'test'

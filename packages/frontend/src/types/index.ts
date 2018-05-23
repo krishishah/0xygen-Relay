@@ -73,3 +73,22 @@ export interface Subscribe {
 }
 
 export type OrderbookSnapshot = TokenPairOrderbookSchema;
+
+///////////////////////////////////////////// OFF CHAIN SCHEMA ///////////////////////////////////////////////////
+
+export interface OffChainTokenSchema {
+    address: string;
+    balance: string;
+}
+
+export interface OffChainTokenBalancesSchema {
+    userAddress: string;
+    tokenBalances: OffChainTokenSchema[];
+}
+
+export interface OffChainTokenBalances {
+    userAddress: string;
+    tokenBalances: TokenBalances;
+}
+
+export type TokenBalances = Map<string, BigNumber>;

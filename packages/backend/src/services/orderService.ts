@@ -29,9 +29,6 @@ export class OrderService {
 
     orderStateWatcher: OrderStateWatcher;
   
-    /**
-     * Initialize the RestApiRouter
-     */
     constructor(
         @OrmRepository(SignedOrderEntity)
         private orderRepository: SignedOrderRepository,

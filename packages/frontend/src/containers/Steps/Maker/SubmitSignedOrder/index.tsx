@@ -2,7 +2,7 @@ import * as React from 'react';
 import { SignedOrder, ZeroEx } from '0x.js';
 import { Button, Form, ButtonProps, Segment } from 'semantic-ui-react';
 import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
-import { RelayerRestfulClient } from '../../../../api/rest';
+import { RelayerRestfulClient } from '../../../../api/relayerRest';
 
 interface Props {
     signedOrder: SignedOrder | undefined;

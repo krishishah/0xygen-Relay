@@ -1,6 +1,15 @@
 import { BigNumber } from 'bignumber.js';
 import { ECSignature, SignedOrder } from '0x.js';
-import { SignedOrderSchema, TokenPairOrderbookSchema, TokenPairOrderbook, OrderRelevantStateSchema } from '../types';
+import { 
+    SignedOrderSchema, 
+    TokenPairOrderbookSchema, 
+    TokenPairOrderbook, 
+    OrderRelevantStateSchema, 
+    OffChainTokenBalancesSchema, 
+    OffChainTokenBalances, 
+    TokenBalances, 
+    OffChainTokenSchema 
+} from '../types';
 import { OrderRelevantState } from '0x.js/lib/src/types';
 
 export class SerializerUtils {
@@ -59,6 +68,19 @@ export class SerializerUtils {
             cancelledTakerTokenAmount: new BigNumber(relevantStateSchema.cancelledTakerTokenAmount),
             remainingFillableMakerTokenAmount: new BigNumber(relevantStateSchema.remainingFillableMakerTokenAmount),
             remainingFillableTakerTokenAmount: new BigNumber(relevantStateSchema.remainingFillableTakerTokenAmount)
+        };
+    }
+
+    public static OffChainTokenBalancesFromJSON(schema: OffChainTokenBalancesSchema): OffChainTokenBalances {
+        let balances: TokenBalances = new Map();
+
+        schema.tokenBalances.map((tokenSchema: OffChainTokenSchema) => {
+            balances.set(tokenSchema.address, new BigNumber(tokenSchema.balance));
+        });
+
+        return {
+            userAddress: schema.userAddress,
+            tokenBalances: balances
         };
     }
 }

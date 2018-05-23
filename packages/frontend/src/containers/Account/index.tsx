@@ -12,7 +12,8 @@ import * as blockies from 'ethereum-blockies';
 
 interface Props {
     accounts: string[];
-    tokenBalances: Dictionary<TokenBalance>;
+    onChainTokenBalances: Dictionary<TokenBalance>;
+    offChainTokenBalances: Dictionary<TokenBalance>;
     etherBalance: BigNumber;
     fetchAccountDetailsAsync: () => void;
 }
@@ -28,7 +29,8 @@ export default class Account extends React.Component<Props, {}> {
     render() {
         
         const account = this.props.accounts[0];
-        const balances = this.props.tokenBalances;
+        const onChainBalances = this.props.onChainTokenBalances;
+        const offChainBalances = this.props.offChainTokenBalances;
         const etherBalance = this.props.etherBalance.toString();
 
         // Icon is a canvas object
@@ -40,9 +42,21 @@ export default class Account extends React.Component<Props, {}> {
 
         const imageSrc = icon.toDataURL();
 
-        if (Object.keys(balances).length > 0) {
+        if (Object.keys(onChainBalances).length > 0 && Object.keys(offChainBalances).length > 0) {
             
-            const tokenBalances = _.map(balances, (v: TokenBalance, k: string) => {
+            const onChainTokenBalances = _.map(onChainBalances, (v: TokenBalance, k: string) => {
+                const pairString = `${k}: ${v.balance}`;
+                return (
+                    <BalanceTableRow 
+                        key={pairString} 
+                        tokenName={v.token.name}
+                        tokenSymbol={v.token.symbol}
+                        value={v.balance.toString()}
+                    />
+                );
+            });
+
+            const offChainTokenBalances = _.map(offChainBalances, (v: TokenBalance, k: string) => {
                 const pairString = `${k}: ${v.balance}`;
                 return (
                     <BalanceTableRow 
@@ -76,7 +90,7 @@ export default class Account extends React.Component<Props, {}> {
                             </List.Content>
                         </List.Item>
                     </List>
-                    <Divider horizontal>Token Balances</Divider>
+                    <Divider horizontal>On-Chain Token Balances</Divider>
                     <Container style={{display: 'flex', justifyContent: 'center'}}>
                         <Table basic="very" collapsing size="large" style={{width: '100%'}}>
                             <Table.Header>
@@ -86,7 +100,21 @@ export default class Account extends React.Component<Props, {}> {
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {tokenBalances}
+                                {onChainTokenBalances}
+                            </Table.Body>
+                        </Table>
+                    </Container>
+                    <Divider horizontal>Off-Chain Token Balances</Divider>
+                    <Container style={{display: 'flex', justifyContent: 'center'}}>
+                        <Table basic="very" collapsing size="large" style={{width: '100%'}}>
+                            <Table.Header>
+                                <Table.Row>
+                                    <Table.HeaderCell>Token</Table.HeaderCell>
+                                    <Table.HeaderCell>Balance</Table.HeaderCell>
+                                </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                                {offChainTokenBalances}
                             </Table.Body>
                         </Table>
                     </Container>
