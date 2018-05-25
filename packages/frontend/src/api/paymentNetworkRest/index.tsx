@@ -4,7 +4,7 @@ import axios, { AxiosRequestConfig, AxiosPromise, AxiosResponse, AxiosError } fr
 import { SerializerUtils } from '../../utils';
 import { SignedOrderSchema, OffChainTokenBalancesSchema, OffChainTokenBalances } from '../../types';
 
-const PAYMENT_NETWORK_HOST: string = 'http://localhost:3002';
+const PAYMENT_NETWORK_HOST: string = 'http://localhost:3003';
 const PAYMENT_NETWORK_GET_BALANCES_URI = (address: string) => `/balances/${address}`;
 
 export class PaymentNetworkRestfulClient extends React.Component {

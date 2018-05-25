@@ -1,5 +1,6 @@
 import { ECSignature } from '@0xproject/types';
 import { BigNumber } from '@0xproject/utils/lib/configured_bignumber';
+import { Token } from '0x.js';
 
 type Address = string;
 
@@ -40,23 +41,30 @@ export interface TokenPairOrderbookSchema {
     asks: OffChainSignedOrderSchema[];
 }
 
-export interface WebSocketMessage<T extends OrderbookUpdate | Subscribe | OrderbookSnapshot> {
+export interface WebSocketMessage<T extends WebSocketMessageTypes> {
     type: string;
-    channel: string;
     requestId: number;
     payload: T;
 }
 
-export type OrderbookUpdate = OffChainSignedOrderSchema;
+export type WebSocketMessageTypes = 
+    PaymentNetworkUpdate | PaymentNetworkSubscribe | PaymentNetworkSubscrptionSuccess;
 
-export interface Subscribe {
-    baseTokenAddress: string;
-    quoteTokenAddress: string;
-    snapshot: boolean;
-    limit: number;
+export interface PaymentNetworkUpdate {
+    signedOrder: OffChainSignedOrderSchema;
+    remainingFillableMakerTokenAmount: string;
+    remainingFillableTakerTokenAmount: string;
 }
 
-export type OrderbookSnapshot = TokenPairOrderbookSchema;
+export interface PaymentNetworkSubscrptionSuccess {
+    baseTokenAddress: string;
+    quoteTokenAddress: string;
+}
+
+export interface PaymentNetworkSubscribe {
+    baseTokenAddress: string;
+    quoteTokenAddress: string;
+}
 
 export interface EnrichedSignedOrder {
     signedOrder: OffChainSignedOrder;
@@ -82,3 +90,38 @@ export interface TokenBalancesSchema {
 }
 
 export type TokenBalances = Map<string, BigNumber>;
+
+export interface FillOrderRequestSchema {
+    signedOrder: OffChainSignedOrderSchema;
+    takerAddress: string;
+    takerFillAmount: string;
+    ecSignature: ECSignature;
+}
+
+export interface FillOrderRequest {
+    signedOrder: OffChainSignedOrder;
+    takerAddress: string;
+    takerFillAmount: BigNumber;
+    ecSignature: ECSignature;
+}
+
+export interface OffChainSignedOrderStatus {
+    orderHash: string;
+    isValid: boolean;
+    signedOrder: OffChainSignedOrder;
+    remainingFillableMakerTokenAmount: BigNumber;
+    remainingFillableTakerTokenAmount: BigNumber;
+}
+
+export interface OffChainSignedOrderStatusSchema {
+    orderHash: string;
+    isValid: boolean;
+    signedOrder: OffChainSignedOrderSchema;
+    remainingFillableMakerTokenAmount: string;
+    remainingFillableTakerTokenAmount: string;
+}
+
+export interface TokenPair {
+    base: Token;
+    quote: Token;
+}

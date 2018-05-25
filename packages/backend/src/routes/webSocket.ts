@@ -18,10 +18,10 @@ import {
     OrderRemoved
 } from '../types/events';
 import { 
-    WebSocketMessage, 
+    OrderbookWebSocketMessage, 
     OrderbookUpdate, 
     OrderbookSnapshot, 
-    Subscribe 
+    OrderbookSubscribe 
 } from '../types/schemas';
 import { Container } from 'typedi/Container';
 import { App } from '../app';
@@ -97,7 +97,7 @@ export class WebSocketHandler {
         connectionMetadata: WebSocketConnectionMetadata
     ): Promise<void> {
         if (message.type === 'utf8' && message.utf8Data !== undefined) {
-            const parsedMessage = JSON.parse(message.utf8Data) as WebSocketMessage<Subscribe>;
+            const parsedMessage = JSON.parse(message.utf8Data) as OrderbookWebSocketMessage<OrderbookSubscribe>;
             console.log('WS: Received Message: ' + parsedMessage.type);
 
             if (parsedMessage.type === 'subscribe') {
@@ -116,18 +116,13 @@ export class WebSocketHandler {
                         quoteTokenAddress
                     ).then(
                         orderbook => {
-                            const returnMessage: WebSocketMessage<OrderbookSnapshot> = {
+                            const returnMessage: OrderbookWebSocketMessage<OrderbookSnapshot> = {
                                 type: 'snapshot',
                                 channel: 'orderbook',
                                 requestId,
                                 payload: SerializerUtils.TokenPairOrderbooktoJSON(orderbook)
                             };
                             socketConnection.sendUTF(JSON.stringify(returnMessage));
-                            
-                            return this.orderService.publishOrderbookUpdate(
-                                baseTokenAddress, 
-                                quoteTokenAddress
-                            );
                         }
                     );
                 }
@@ -155,7 +150,7 @@ export class WebSocketHandler {
 
                 // ORDER_ADDED, ORDER_UPDATED & ORDER_DELETED all result in Update WS Messages
                 // being sent according to the 0x protocol.
-                const orderAddedMessage: WebSocketMessage<OrderbookUpdate> = {
+                const orderAddedMessage: OrderbookWebSocketMessage<OrderbookUpdate> = {
                     type: 'update',
                     channel: 'orderbook',
                     requestId,

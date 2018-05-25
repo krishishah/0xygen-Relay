@@ -17,7 +17,7 @@ function bigNumberToBN(value: BigNumber): BN {
     return new BN(value.toString(), base);
 }
 
-export function getOrderHashHex(order: OffChainOrder | OffChainSignedOrder): string {
+export function getOffChainOrderHashHex(order: OffChainOrder | OffChainSignedOrder): string {
     const orderParts = [
         { value: order.maker, type: SolidityTypes.Address },
         { value: order.taker, type: SolidityTypes.Address },

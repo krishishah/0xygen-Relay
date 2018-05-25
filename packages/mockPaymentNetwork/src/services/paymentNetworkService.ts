@@ -6,11 +6,19 @@ import { SignedOrder, BlockParamLiteral } from '@0xproject/types';
 import { Service } from 'typedi';
 import { OrmRepository } from 'typeorm-typedi-extensions';
 import { UserTokenBalanceEntity } from '../entities/userTokenBalanceEntity';
-import { EnrichedSignedOrder, TokenBalances, OffChainSignedOrder } from '../types/schemas';
+import { 
+    EnrichedSignedOrder, 
+    TokenBalances, 
+    OffChainSignedOrder, 
+    FillOrderRequest, 
+    OffChainSignedOrderStatus 
+} from '../types/schemas';
 import { promisify } from 'util';
 import { OffChainSignedOrderEntity } from '../entities/offChainSignedOrderEntity';
 import { OffChainSignedOrderRepository } from '../repositories/offChainSignedOrderRepository';
-import { getOrderHashHex } from '../utils/orderHash';
+import { getOffChainOrderHashHex } from '../utils/offChainOrderHash';
+import { EventPubSub } from './eventPubSub';
+import { OrderEvent, OrderUpdate, ORDER_FILL_EVENT, ORDER_UPDATED } from '../types/events';
 
 @Service()
 export class PaymentNetworkService {
@@ -19,6 +27,7 @@ export class PaymentNetworkService {
      * Creates an instance of PaymentNetworkService.
      * @param {UserTokenBalanceRepository} userTokenBalanceRepository 
      * @param {OffChainSignedOrderRepository} offChainSignedOrderRepository 
+     * @param {EventPubSub} pubSubClient
      * @memberof PaymentNetworkService
      */
     constructor(
@@ -26,12 +35,13 @@ export class PaymentNetworkService {
         private userTokenBalanceRepository: UserTokenBalanceRepository,
         @OrmRepository(OffChainSignedOrderEntity)
         private offChainSignedOrderRepository: OffChainSignedOrderRepository,
+        private pubSubClient: EventPubSub
     ) { }
     
     /**
      * Get user token balances or throw if user address not found.
      * @param {string} address 
-     * @returns 
+     * @returns {Promise<TokenBalances>} 
      * @memberof PaymentNetworkService
      */
     getUserTokenBalances(address: string): Promise<TokenBalances> {
@@ -73,12 +83,16 @@ export class PaymentNetworkService {
      * @returns {Promise<void>} 
      * @memberof PaymentNetworkService
      */
-    async fillOrder(offChainSignedOrder: OffChainSignedOrder, takerFillAmount: BigNumber): Promise<void> {
+    async fillOrder(fillOrderRequest: FillOrderRequest): Promise<void> {
+        const offChainSignedOrder: OffChainSignedOrder = fillOrderRequest.signedOrder;
+        const takerAddress: string = fillOrderRequest.takerAddress;
+        const takerFillAmount: BigNumber = fillOrderRequest.takerFillAmount;
+
         // TODO: Perform signed order validation
         const rate = offChainSignedOrder.makerTokenAmount.dividedBy(offChainSignedOrder.takerTokenAmount);
         const makerFillAmount = rate.mul(offChainSignedOrder.makerTokenAmount);
 
-        const orderHashHex = getOrderHashHex(offChainSignedOrder);
+        const orderHashHex = getOffChainOrderHashHex(offChainSignedOrder);
         
         let enrichedOrder: EnrichedSignedOrder;
         try {
@@ -97,18 +111,45 @@ export class PaymentNetworkService {
             enrichedOrder.remainingMakerTokenAmount.minus(makerFillAmount);
             enrichedOrder.remainingTakerTokenAmount.minus(takerFillAmount);
 
+            await this.offChainSignedOrderRepository.addOrUpdateOrder(enrichedOrder, orderHashHex);
+
             await this.userTokenBalanceRepository.swapTokens(
                 offChainSignedOrder.maker,
                 offChainSignedOrder.makerTokenAddress,
                 makerFillAmount,
-                offChainSignedOrder.taker,
+                takerAddress,
                 offChainSignedOrder.takerTokenAddress,
                 takerFillAmount
             )
             .catch(e => { throw e; });
 
-            await this.offChainSignedOrderRepository.addOrUpdateOrder(enrichedOrder, orderHashHex);
+            const orderEvent: OrderEvent<OrderUpdate> = {
+                type: ORDER_FILL_EVENT,
+                payload: {
+                    order: enrichedOrder.signedOrder,
+                    remainingFillableMakerAmount: enrichedOrder.remainingMakerTokenAmount,
+                    remainingFillableTakerAmount: enrichedOrder.remainingTakerTokenAmount
+                }
+            };
+            this.pubSubClient.publish(ORDER_UPDATED, orderEvent);
         }
+    }
+
+    getOrderStatus(orderHash: string): Promise<OffChainSignedOrderStatus> {
+        return this.getEnrichedOffChainSignedOrder(orderHash)
+            .then((order: EnrichedSignedOrder) => {
+                const orderStatus: OffChainSignedOrderStatus = {
+                    orderHash: orderHash,
+                    isValid: (order.remainingMakerTokenAmount.gt(0) && order.remainingTakerTokenAmount.gt(0)),
+                    signedOrder: order.signedOrder,
+                    remainingFillableMakerTokenAmount: order.remainingMakerTokenAmount,
+                    remainingFillableTakerTokenAmount: order.remainingTakerTokenAmount
+                };
+
+                return orderStatus;
+            }
+        )
+        .catch(e => { throw e; });
     }
 
 }

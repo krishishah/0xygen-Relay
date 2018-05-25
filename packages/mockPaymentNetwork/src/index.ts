@@ -14,8 +14,8 @@ import { BlockParamLiteral } from '0x.js';
 import { useContainer as ormUseContainer, createConnection } from 'typeorm';
 
 const host: string = process.env.PAMENT_NETWORK_HOST || 'localhost';
-const httpPort: number = normalizePort(process.env.PAYMENT_NETWORK_PORT || 3002) as number;
-const wsPort: number = normalizePort(process.env.PAYMENT_NETWORK_WSPORT || 3003) as number;
+const httpPort: number = normalizePort(process.env.PAYMENT_NETWORK_PORT || 3003) as number;
+const wsPort: number = normalizePort(process.env.PAYMENT_NETWORK_WSPORT || 3004) as number;
 
 async function createServer(): Promise<Express.Application> {
     debug('ts-express:server');

@@ -1,5 +1,5 @@
 import { SignedOrder } from '@0xproject/types';
-import { EnrichedSignedOrder } from '../types/schemas';
+import { EnrichedSignedOrder, OffChainEnrichedSignedOrder } from '../types/schemas';
 
 // This compare function assumes MAKER/TAKER token pair
 export function enrichedSignedOrderCompare(x: EnrichedSignedOrder, y: EnrichedSignedOrder): number {
@@ -17,6 +17,21 @@ export function enrichedSignedOrderCompare(x: EnrichedSignedOrder, y: EnrichedSi
 
     if (!xFees.equals(yFees)) {
         return xFees.minus(yFees).toNumber();
+    }
+
+    return x.signedOrder.expirationUnixTimestampSec.minus(y.signedOrder.expirationUnixTimestampSec).toNumber();
+}
+
+export function OffChainEnrichedSignedOrderCompare(
+    x: OffChainEnrichedSignedOrder, 
+    y: OffChainEnrichedSignedOrder
+): number {
+    const xPrice = x.signedOrder.takerTokenAmount.dividedBy(x.signedOrder.makerTokenAmount);
+    const yPrice = y.signedOrder.takerTokenAmount.dividedBy(y.signedOrder.makerTokenAmount);
+    
+    // Sort by descending order of rate
+    if (!xPrice.equals(yPrice)) {
+        return yPrice.minus(xPrice).toNumber();
     }
 
     return x.signedOrder.expirationUnixTimestampSec.minus(y.signedOrder.expirationUnixTimestampSec).toNumber();

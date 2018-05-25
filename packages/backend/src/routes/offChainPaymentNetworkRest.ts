@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { BigNumber } from '@0xproject/utils/lib/configured_bignumber';
 import { Service, Container } from 'typedi';
-import { OrderService } from '../services/orderService';
+import { OffChainOrderService } from '../services/offChainOrderService';
 import { SignedOrder } from '0x.js';
 import { SerializerUtils } from '../utils/serialization';
 import { SignedOrderSchema } from '../types/schemas';
@@ -16,18 +16,9 @@ export class OffChainPaymentNetworkRestRoutes {
     /**
      * Initialize the RestApiRouter
      */
-    constructor(private orderService: OrderService) {
+    constructor(private orderService: OffChainOrderService) {
         this.router = Router();
         this.init();
-    }
-
-    /**
-     * GET token pairs.
-     */
-    public getTokenPairs(req: Request, res: Response, next: NextFunction) {
-        res.statusMessage = 'Success';
-        res.status(201).send({});
-
     }
 
     /**
@@ -38,7 +29,7 @@ export class OffChainPaymentNetworkRestRoutes {
         const quoteTokenAddress: string = req.query.quoteTokenAddress;
         this.orderService.getOrderbook(baseTokenAddress, quoteTokenAddress)
             .then(orderBook => {
-                res.status(201).json(SerializerUtils.TokenPairOrderbooktoJSON(orderBook));
+                res.status(201).json(SerializerUtils.OffChainTokenPairOrderbooktoJSON(orderBook));
             })
             .catch(error => {
                 // TODO: Sort out error handling
@@ -65,7 +56,7 @@ export class OffChainPaymentNetworkRestRoutes {
         this.orderService
             .getOrder(orderHashHex)
             .then(order => {
-                    res.status(201).json(SerializerUtils.SignedOrdertoJSON(order));
+                    res.status(201).json(SerializerUtils.OffChainSignedOrdertoJSON(order));
                 }
             )
             .catch(error => {
@@ -74,19 +65,6 @@ export class OffChainPaymentNetworkRestRoutes {
                     });
                 }
             );
-    }
-
-    /**
-     * POST fees.
-     */
-    public postFees(req: Request, res: Response, next: NextFunction) {
-        const makerFee = new BigNumber(0).toString();
-        const takerFee = ZeroEx.toBaseUnitAmount(new BigNumber(10), 18).toString();
-        res.status(201).send({
-            feeRecipient: ZeroEx.NULL_ADDRESS,
-            makerFee,
-            takerFee,
-        });
     }
 
     /**
@@ -115,11 +93,9 @@ export class OffChainPaymentNetworkRestRoutes {
      * endpoints.
      */
     private init() {
-        this.router.get('/token_pairs', this.getTokenPairs.bind(this));
         this.router.get('/orderbook', this.getOrderbook.bind(this));
         this.router.get('/orders', this.getOrders.bind(this));
         this.router.get('/order/:orderHash', this.getOrder.bind(this));
-        this.router.post('/fees', this.postFees.bind(this));
         this.router.post('/order', this.postOrder.bind(this));
     }
     

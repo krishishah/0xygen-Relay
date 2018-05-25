@@ -23,6 +23,9 @@ export const KOVAN_RPC: string = 'https://kovan.infura.io/WJFq23sRIxeu7Snltrjq';
 export const TEST_RPC_NETWORK_ID: number = 50;
 export const TEST_RPC: string = 'http://localhost:8545';
 
+export const PAYMENT_NETWORK_WS_HOST = 'ws://localhost:3004';
+export const PAYMENT_NETWORK_HTTP_HOST = 'http://localhost:3003';
+
 export const orderStateWatcherConfig: OrderStateWatcherConfig = {
     // orderExpirationCheckingIntervalMs: 200,
     // eventPollingIntervalMs: 200,

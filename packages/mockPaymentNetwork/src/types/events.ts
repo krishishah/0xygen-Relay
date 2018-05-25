@@ -2,21 +2,20 @@ import { BigNumber } from 'bignumber.js';
 import { Token, OrderState, ExchangeContractErrs } from '0x.js';
 import { OffChainSignedOrder, OffChainOrderRelevantState } from './schemas';
 
-// Event types
-export const ORDER_UPDATED = 'ORDER_FILLED';
-export const ORDER_REMOVED = 'ORDER_CANCELLED'; 
+// Event update types
+export const ORDER_UPDATED = 'ORDER_UPDATED';
 
-export interface OrderEvent<T extends OrderFilled | OrderCancelled > {
+// Event types
+export const ORDER_FILL_EVENT = 'fill';
+export const ORDER_CANCEL_EVENT = 'cancel';
+
+export interface OrderEvent<T extends OrderUpdate> {
     type: string;
     payload: T;
 }
 
-export interface OrderFilled {
+export interface OrderUpdate {
     order: OffChainSignedOrder;
-    orderState: OffChainOrderRelevantState;
-}
-
-export interface OrderCancelled {
-    order: OffChainSignedOrder;
-    orderState: OffChainOrderRelevantState;
+    remainingFillableMakerAmount: BigNumber;
+    remainingFillableTakerAmount: BigNumber;
 }

@@ -7,7 +7,11 @@ import {
     OffChainSignedOrder,
     TokenBalances,
     TokenSchema,
-    TokenBalancesSchema
+    TokenBalancesSchema,
+    FillOrderRequestSchema,
+    OffChainSignedOrderStatus,
+    OffChainSignedOrderStatusSchema,
+    FillOrderRequest
 } from '../types/schemas';
 import { TokenPairOrderbook } from '../types/tokenPairOrderBook';
 
@@ -84,6 +88,28 @@ export class SerializerUtils {
         };
         
         return res;
+    }
+
+    public static FillOrderRequestFromJSON(schema: FillOrderRequestSchema): FillOrderRequest {
+        const fillOrderRequest: FillOrderRequest = {
+            signedOrder: SerializerUtils.SignedOrderfromJSON(schema.signedOrder),
+            takerAddress: schema.takerAddress,
+            takerFillAmount: new BigNumber(schema.takerFillAmount),
+            ecSignature: schema.ecSignature
+        };
+
+        return fillOrderRequest;
+    }
+
+    public static OrderStatusToJSON(status: OffChainSignedOrderStatus): OffChainSignedOrderStatusSchema {
+        const schema: OffChainSignedOrderStatusSchema = {
+            orderHash: status.orderHash,
+            isValid: status.isValid,
+            signedOrder: SerializerUtils.SignedOrdertoJSON(status.signedOrder),
+            remainingFillableMakerTokenAmount: status.remainingFillableMakerTokenAmount.toFixed(),
+            remainingFillableTakerTokenAmount: status.remainingFillableTakerTokenAmount.toFixed()
+        };
+        return schema;
     }
 
 }

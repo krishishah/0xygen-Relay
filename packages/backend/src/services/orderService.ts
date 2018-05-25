@@ -8,7 +8,6 @@ import { OrmRepository } from 'typeorm-typedi-extensions';
 import { SchemaValidator } from '@0xproject/json-schemas';
 import { SignedOrderEntity } from '../entities/signedOrderEntity';
 import { ZeroExWrapper } from '../utils/zeroExWrapper';
-import { TokenPairOrderbook } from '../types/tokenPairOrderbook';
 import { OrderStateWatcher } from '0x.js/lib/src/order_watcher/order_state_watcher';
 import { orderStateWatcherConfig } from '../index';
 import { EventPubSub } from './eventPubSub';
@@ -21,7 +20,7 @@ import {
     OrderRemoved, 
     ORDER_REMOVED 
 } from '../types/events';
-import { EnrichedSignedOrder } from '../types/schemas';
+import { EnrichedSignedOrder, TokenPairOrderbook } from '../types/schemas';
 import { promisify } from 'util';
 
 @Service()
@@ -127,46 +126,6 @@ export class OrderService {
         this.orderStateWatcher.removeOrder(orderHash);
     }
 
-    // TODO: Publish updates only to certain clients rather than all clients
-    public publishOrderbookUpdate(baseTokenAddress: string, quoteTokenAddress: string) {
-        return Promise.all(
-            [
-                // Bids have quote as the makerTokenAddress and base as the takerTokenAddress
-                this.orderRepository.getEnrichedTokenPairOrders(quoteTokenAddress, baseTokenAddress),
-                
-                // Asks have base as the makerTokenAddress and quots as the takerTokenAddress
-                this.orderRepository.getEnrichedTokenPairOrders(baseTokenAddress, quoteTokenAddress) 
-            ]
-        )
-        .then(tokenPairs => {
-            // bids & asks
-            tokenPairs.map(orders => orders.map(order => {
-                if (order.remainingTakerTokenAmount.lessThan(order.signedOrder.takerTokenAmount)) {
-                    const orderEvent: OrderEvent<OrderUpdated> = {
-                        type: ORDER_UPDATED,
-                        payload: {
-                            order: order.signedOrder,
-                            // TODO: Find better way of doing this
-                            orderState: {
-                                makerBalance: new BigNumber(NaN),
-                                makerProxyAllowance: new BigNumber(NaN),
-                                makerFeeBalance: new BigNumber(NaN),
-                                makerFeeProxyAllowance: new BigNumber(NaN),
-                                filledTakerTokenAmount: new BigNumber(NaN),
-                                cancelledTakerTokenAmount: new BigNumber(NaN),
-                                remainingFillableMakerTokenAmount: order.remainingMakerTokenAmount,
-                                remainingFillableTakerTokenAmount: order.remainingTakerTokenAmount
-                            },
-                            makerTokenAddress: order.signedOrder.makerTokenAddress,
-                            takerTokenAddress: order.signedOrder.takerTokenAddress
-                        }
-                    };
-                    this.pubSubClient.publish(ORDER_UPDATED, orderEvent);
-                }
-            }));
-        });
-    }
-
     private async watchOrderbook(): Promise<void> {
         this.orderRepository
             .getAllEnrichedSignedOrders()
@@ -201,22 +160,10 @@ export class OrderService {
                         remainingMakerTokenAmount: orderRelevantState.remainingFillableMakerTokenAmount,
                         remainingTakerTokenAmount: orderRelevantState.remainingFillableTakerTokenAmount
                     };
-
                     return enrichedSignedOrder;
                 })
                 .then((enrichedSignedOrder: EnrichedSignedOrder) => {
                     this.orderRepository.addOrUpdateOrder(enrichedSignedOrder, orderState.orderHash);
-                    
-                    const orderEvent: OrderEvent<OrderUpdated> = {
-                        type: ORDER_UPDATED,
-                        payload: {
-                            order: enrichedSignedOrder.signedOrder,
-                            orderState: orderRelevantState,
-                            makerTokenAddress: enrichedSignedOrder.signedOrder.makerTokenAddress,
-                            takerTokenAddress: enrichedSignedOrder.signedOrder.takerTokenAddress
-                        }
-                    };
-                    this.pubSubClient.publish(ORDER_UPDATED, orderEvent);
                 })
                 .catch(e => {
                     console.log(`onOrderWatcherEvent Error: ${e.message}`); 
@@ -235,18 +182,7 @@ export class OrderService {
                 })
                 .then(enrichedSignedOrder => {                    
                     this.orderRepository.removeEnrichedSignedOrder(enrichedSignedOrder, state.orderHash);
-                    
-                    const orderEvent: OrderEvent<OrderRemoved> = {
-                        type: ORDER_REMOVED,
-                        payload: {
-                            order: enrichedSignedOrder.signedOrder,
-                            exchangeContractErrs: state.error.toString(),
-                            makerTokenAddress: enrichedSignedOrder.remainingMakerTokenAmount.toString(),
-                            takerTokenAddress: enrichedSignedOrder.remainingTakerTokenAmount.toString()
-                        }
-                    };
                     this.unwatchOrder(enrichedSignedOrder.signedOrder);
-                    this.pubSubClient.publish(ORDER_REMOVED, orderEvent);
                 })
                 .catch(e => { 
                     console.log(`Order Watcher Error: ${err.message}`); 

@@ -4,7 +4,14 @@ import { Service, Container } from 'typedi';
 import { PaymentNetworkService } from '../services/paymentNetworkService';
 import { SignedOrder } from '0x.js';
 import { SerializerUtils } from '../utils/serialization';
-import { OffChainSignedOrderSchema, OffChainSignedOrder, SetBalancesSchema, TokenBalances } from '../types/schemas';
+import { 
+    OffChainSignedOrderSchema, 
+    OffChainSignedOrder, 
+    SetBalancesSchema, 
+    TokenBalances, 
+    FillOrderRequestSchema, 
+    OffChainSignedOrderStatus 
+} from '../types/schemas';
 import { ZeroEx } from '0x.js/lib/src/0x';
 import { WebSocketHandler } from './webSocket';
 
@@ -30,6 +37,10 @@ export class RestApiRoutes {
             .getUserTokenBalances(address)
             .then((tokenBalances: TokenBalances) => {
                 res.status(201).json(SerializerUtils.TokenBalancesToJson(address, tokenBalances));
+            })
+            .catch(e => {
+                res.statusMessage = e.statusMessage;
+                res.status(404).send({});
             }
         );
     }
@@ -47,6 +58,10 @@ export class RestApiRoutes {
             .then(v => {
                 res.statusMessage = 'Success';
                 res.status(201).send({});
+            })
+            .catch(e => {
+                res.statusMessage = e.statusMessage;
+                res.status(500).send({});
             }
         );
     }
@@ -56,8 +71,15 @@ export class RestApiRoutes {
      */
     public fillOrder(req: Request, res: Response, next: NextFunction) {
         const { body } = req;
-        const signedOrderSchema = body as OffChainSignedOrderSchema;
-        const signedOrder = SerializerUtils.SignedOrderfromJSON(signedOrderSchema);
+        const schema = body as FillOrderRequestSchema;
+        const fillOrderRequest = SerializerUtils.FillOrderRequestFromJSON(schema);
+        this.service
+            .fillOrder(fillOrderRequest)
+            .then(() => {
+                res.statusMessage = 'Success';
+                res.status(201).send({});
+            }
+        );
     }
 
     /**
@@ -86,9 +108,18 @@ export class RestApiRoutes {
      * GET Order status
      */
     public getOrderStatus(req: Request, res: Response, next: NextFunction) {
-        const { body } = req;
-        const signedOrderSchema = body as OffChainSignedOrderSchema;
-        const signedOrder = SerializerUtils.SignedOrderfromJSON(signedOrderSchema);
+        const orderHash: string = req.params.orderHash;
+        this.service
+            .getOrderStatus(orderHash)
+            .then((status: OffChainSignedOrderStatus) => {
+                const schema = SerializerUtils.OrderStatusToJSON(status);
+                res.status(201).send(schema);
+            })
+            .catch(e => {
+                res.statusMessage = e.statusMessage;
+                res.status(404).send({});
+            }
+        );
     }
 
     /**
