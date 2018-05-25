@@ -47,7 +47,6 @@ import {
     SimpleMakerTradeStepsHeader, 
     SimpleMakerTradeStep 
 } from '../../components/SimpleMakerTradeSteps';
-
 import { 
     ZeroEx, 
     Token, 
@@ -61,7 +60,7 @@ import {
     TEST_RPC, 
     TEST_RPC_NETWORK_ID 
 } from '../../config';
-import { PaymentNetworkRestfulClient } from '../../api/paymentNetworkRest';
+import { PaymentNetworkRestfulClient } from '../../api/paymentNetwork/rest';
 import { OffChainTokenBalances } from '../../types';
 
 const Web3ProviderEngine = require('web3-provider-engine');

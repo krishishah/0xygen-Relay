@@ -7,27 +7,39 @@ export class ServerClient {
 
     private static server: Server;
     private static dbConnection: Connection;
-    private static wsServer: WebSocketServer;
+    private static zeroExWsServer: WebSocketServer;
+    private static offChainWsServer: WebSocketServer;
 
     public static getHttpServerInstance(): Server {
         return this.server;
     }
 
-    public static getWebSocketServerInstance(): Server {
-        return this.wsServer;
+    public static getZeroExRelayerApiWebSocketServerInstance(): Server {
+        return this.zeroExWsServer;
+    }
+
+    public static getOffChainApiWebSocketServerInstance(): Server {
+        return this.offChainWsServer;
     }
 
     public static getDbConnectionInstance(): Connection {
         return this.dbConnection;
     }
 
-    public static createInstance(server: Server, wsServer: WebSocketServer, dbConnection: Connection): ServerClient {
+    public static createInstance(
+        server: Server, 
+        zeroExWsServer: WebSocketServer, 
+        offChainWsServer: WebSocketServer,
+        dbConnection: Connection
+    ): ServerClient {
         if (isNullOrUndefined(this.server) 
-            && isNullOrUndefined(this.wsServer) 
+            && isNullOrUndefined(this.zeroExWsServer) 
             && isNullOrUndefined(this.dbConnection)
+            && isNullOrUndefined(this.offChainWsServer)
         ) {
             this.server = server;
-            this.wsServer = wsServer;
+            this.zeroExWsServer = zeroExWsServer;
+            this.offChainWsServer = offChainWsServer;
             this.dbConnection = dbConnection;
         }
         return this;

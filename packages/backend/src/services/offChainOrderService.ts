@@ -30,6 +30,7 @@ import { EventPubSub } from './eventPubSub';
 import { OffChainPaymentNetworkHttpClient } from '../clients/offChainPaymentNetworkHttpClient';
 import { stat } from 'fs';
 import { SerializerUtils } from '../utils/serialization';
+import { OffChainPaymentNetworkWsClient } from '../clients/offChainPaymentNetworkWsClient';
 
 @Service()
 export class OffChainOrderService {
@@ -44,6 +45,7 @@ export class OffChainOrderService {
         @OrmRepository(OffChainSignedOrderEntity)
         private offChainSignedOrderRepository: OffChainSignedOrderRepository,
         private httpClient: OffChainPaymentNetworkHttpClient,
+        private wsClient: OffChainPaymentNetworkWsClient,
         private pubSubClient: EventPubSub,
     ) { 
         this.onPaymentNetworkUpdate.bind(this);

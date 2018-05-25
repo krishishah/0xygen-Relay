@@ -1,26 +1,30 @@
 import * as http from 'http';
 import { Service } from 'typedi';
-import { PaymentNetworkService } from '../services/paymentNetworkService';
-import { SerializerUtils } from '../utils/serialization';
+import { OrderService } from '../../services/orderService';
+import { SerializerUtils } from '../../utils/serialization';
+import { EventPubSub } from '../../services/eventPubSub';
 import {
     connection as WebSocketConnection,
     server as WebSocketServer,
     request as WebSocketRequest
 } from 'websocket';
 import { 
-    WebSocketMessage, 
-    PaymentNetworkSubscribe, 
-    PaymentNetworkSubscrptionSuccess, 
-    PaymentNetworkUpdate
-} from '../types/schemas';
-import { Container } from 'typedi/Container';
-import { App } from '../app';
-import { EventPubSub } from '../services/eventPubSub';
-import { 
     OrderEvent, 
-    OrderUpdate, 
-    ORDER_UPDATED
-} from '../types/events';
+    OrderAdded, 
+    OrderUpdated, 
+    ORDER_UPDATED, 
+    ORDER_ADDED, 
+    ORDER_REMOVED,
+    OrderRemoved
+} from '../../types/events';
+import { 
+    OrderbookWebSocketMessage, 
+    OrderbookUpdate, 
+    OrderbookSnapshot, 
+    OrderbookSubscribe 
+} from '../../types/schemas';
+import { Container } from 'typedi/Container';
+import { App } from '../../app';
 
 interface WebSocketConnectionMetadata {
     socketConnection: WebSocketConnection;
@@ -28,8 +32,6 @@ interface WebSocketConnectionMetadata {
     subscriptionCount: number;
     subscriptionIdMap: Map<string, number>;
 }
-
-const GENESIS_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 @Service()
 export class WebSocketHandler {
@@ -40,7 +42,7 @@ export class WebSocketHandler {
      * Initialize the Web Socket Handler
      */
     constructor( 
-        private orderService: PaymentNetworkService, 
+        private orderService: OrderService, 
         private pubSubClient: EventPubSub
     ) {
         this.connectionMetadataSet = new Set();
@@ -96,40 +98,46 @@ export class WebSocketHandler {
         connectionMetadata: WebSocketConnectionMetadata
     ): Promise<void> {
         if (message.type === 'utf8' && message.utf8Data !== undefined) {
-            const parsedMessage = JSON.parse(message.utf8Data) as WebSocketMessage<PaymentNetworkSubscribe>;
+            const parsedMessage = JSON.parse(message.utf8Data) as OrderbookWebSocketMessage<OrderbookSubscribe>;
             console.log('WS: Received Message: ' + parsedMessage.type);
 
             if (parsedMessage.type === 'subscribe') {
 
                 const socketConnection = connectionMetadata.socketConnection;
+                const snapshotNeeded = parsedMessage.payload.snapshot;
                 const baseTokenAddress = parsedMessage.payload.baseTokenAddress;
                 const quoteTokenAddress = parsedMessage.payload.quoteTokenAddress;
                 const requestId = parsedMessage.requestId;
     
                 connectionMetadata.subscriptions.push(`${baseTokenAddress}-${quoteTokenAddress}`);
     
-                if (socketConnection !== undefined) {
-                    const returnMessage: WebSocketMessage<PaymentNetworkSubscrptionSuccess> = {
-                        type: 'success',
-                        requestId,
-                        payload: parsedMessage.payload
-                    };
-                    socketConnection.sendUTF(JSON.stringify(returnMessage));
+                if (snapshotNeeded && socketConnection !== undefined) {
+                    this.orderService.getOrderbook(
+                        baseTokenAddress, 
+                        quoteTokenAddress
+                    ).then(
+                        orderbook => {
+                            const returnMessage: OrderbookWebSocketMessage<OrderbookSnapshot> = {
+                                type: 'snapshot',
+                                channel: 'orderbook',
+                                requestId,
+                                payload: SerializerUtils.TokenPairOrderbooktoJSON(orderbook)
+                            };
+                            socketConnection.sendUTF(JSON.stringify(returnMessage));
+                        }
+                    );
                 }
             }
         }
     }
 
     private handleOrderbookUpdate(
-        data: OrderEvent<OrderUpdate>
+        data: OrderEvent<OrderAdded | OrderUpdated | OrderRemoved>
     ) { 
-        const { makerTokenAddress, takerTokenAddress } = data.payload.order;
-
-        // Nodes wish to subscribe to all token pairs specify a GENESIS_ADDRESS-GENESIS_ADDRESS payload
+        const { makerTokenAddress, takerTokenAddress } = data.payload;
         const subChannels = [
                              `${makerTokenAddress}-${takerTokenAddress}`, 
-                             `${takerTokenAddress}-${makerTokenAddress}`,
-                             `${GENESIS_ADDRESS}-${GENESIS_ADDRESS}`
+                             `${takerTokenAddress}-${makerTokenAddress}`
                             ];
         
         console.log(`Received OrderEvent of type: ${data.type} with data:\n${JSON.stringify(data)}`);
@@ -141,16 +149,13 @@ export class WebSocketHandler {
                                   || activeConnection.subscriptionIdMap.get(subChannels[1])
                                   || 0;
 
-                const payload: PaymentNetworkUpdate = {
-                    signedOrder: SerializerUtils.SignedOrdertoJSON(data.payload.order),
-                    remainingFillableMakerTokenAmount: data.payload.remainingFillableMakerAmount.toFixed(),
-                    remainingFillableTakerTokenAmount: data.payload.remainingFillableTakerAmount.toFixed()
-                };
-
-                const orderAddedMessage: WebSocketMessage<PaymentNetworkUpdate> = {
-                    type: data.type,
+                // ORDER_ADDED, ORDER_UPDATED & ORDER_DELETED all result in Update WS Messages
+                // being sent according to the 0x protocol.
+                const orderAddedMessage: OrderbookWebSocketMessage<OrderbookUpdate> = {
+                    type: 'update',
+                    channel: 'orderbook',
                     requestId,
-                    payload,
+                    payload: SerializerUtils.SignedOrdertoJSON(data.payload.order),
                 };
                 
                 activeConnection.socketConnection.sendUTF(JSON.stringify(orderAddedMessage));
@@ -164,6 +169,7 @@ export class WebSocketHandler {
      */
     private init() {
         this.pubSubClient.subscribe(ORDER_UPDATED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(ORDER_REMOVED, this.handleOrderbookUpdate.bind(this));
     }
-
 }

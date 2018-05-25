@@ -1,8 +1,8 @@
 import * as http from 'http';
 import { Service } from 'typedi';
-import { OrderService } from '../services/orderService';
-import { SerializerUtils } from '../utils/serialization';
-import { EventPubSub } from '../services/eventPubSub';
+import { OrderService } from '../../services/orderService';
+import { SerializerUtils } from '../../utils/serialization';
+import { EventPubSub } from '../../services/eventPubSub';
 import {
     connection as WebSocketConnection,
     server as WebSocketServer,
@@ -15,16 +15,17 @@ import {
     ORDER_UPDATED, 
     ORDER_ADDED, 
     ORDER_REMOVED,
-    OrderRemoved
-} from '../types/events';
+    OrderRemoved,
+    OFF_CHAIN_ORDER_ADDED
+} from '../../types/events';
 import { 
     OrderbookWebSocketMessage, 
     OrderbookUpdate, 
     OrderbookSnapshot, 
     OrderbookSubscribe 
-} from '../types/schemas';
+} from '../../types/schemas';
 import { Container } from 'typedi/Container';
-import { App } from '../app';
+import { App } from '../../app';
 
 interface WebSocketConnectionMetadata {
     socketConnection: WebSocketConnection;
@@ -34,7 +35,7 @@ interface WebSocketConnectionMetadata {
 }
 
 @Service()
-export class WebSocketHandler {
+export class OffChainWebSocketHandler {
 
     private connectionMetadataSet: Set<WebSocketConnectionMetadata>;
 
@@ -70,6 +71,7 @@ export class WebSocketHandler {
                     this.closeWebSocketConnection(connectionMetadata);
                 }
             }
+        // tslint:disable-next-line:align
         }, 1000);
 
         socketConnection.on('message', message => 
@@ -167,8 +169,6 @@ export class WebSocketHandler {
      * listeners.
      */
     private init() {
-        this.pubSubClient.subscribe(ORDER_UPDATED, this.handleOrderbookUpdate.bind(this));
-        this.pubSubClient.subscribe(ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
-        this.pubSubClient.subscribe(ORDER_REMOVED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(OFF_CHAIN_ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
     }
 }

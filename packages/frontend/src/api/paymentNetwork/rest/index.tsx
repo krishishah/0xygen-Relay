@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { SignedOrder } from '0x.js';
 import axios, { AxiosRequestConfig, AxiosPromise, AxiosResponse, AxiosError } from 'axios';
-import { SerializerUtils } from '../../utils';
-import { SignedOrderSchema, OffChainTokenBalancesSchema, OffChainTokenBalances } from '../../types';
+import { SerializerUtils } from '../../../utils';
+import { SignedOrderSchema, OffChainTokenBalancesSchema, OffChainTokenBalances } from '../../../types';
 
 const PAYMENT_NETWORK_HOST: string = 'http://localhost:3003';
 const PAYMENT_NETWORK_GET_BALANCES_URI = (address: string) => `/balances/${address}`;

@@ -3,15 +3,16 @@ import * as express from 'express';
 import * as logger from 'morgan';
 import * as bodyParser from 'body-parser';
 import * as Web3 from 'web3';
-import { V0RestApiRouter } from './routes/rest';
+import { V0RestApiRouter } from './routes/zeroExApi/rest';
 import { ZeroEx, ZeroExConfig } from '0x.js';
 import { Service } from 'typedi';
 import { Container } from 'typedi/Container';
 import { server as WebSocketServer } from 'websocket';
 import * as http from 'http';
-import { WebSocketHandler } from './routes/webSocket';
+import { OffChainWebSocketHandler } from './routes/zeroExApi/webSocket';
 import * as cors from 'cors';
-import { OffChainPaymentNetworkRestRoutes } from './routes/offChainPaymentNetworkRest';
+import { OffChainPaymentNetworkRestRoutes } from './routes/offChainApi/rest';
+import { WebSocketHandler } from './routes/offChainApi/webSocket';
 
 // Creates and configures an ExpressJS web server.
 @Service()
@@ -21,21 +22,24 @@ export class App {
     public express: express.Application;
 
     // ref to Express instance
-    public wsServer: WebSocketServer;
+    public zeroExWsServer: WebSocketServer;
+    public offChainWsServer: WebSocketServer;
 
     // Run configuration methods on the Express instance.
     constructor(
         private v0RestApiRouter: V0RestApiRouter,
         private offChainRestApiRouter: OffChainPaymentNetworkRestRoutes, 
-        private wsHandler: WebSocketHandler
+        private zeroExApiWsHandler: WebSocketHandler,
+        private offChainApiWsHandler: OffChainWebSocketHandler
     ) {
         this.express = express();
-        this.wsServer = this.initialiseWebSocketServer();
+        this.zeroExWsServer = this.initZeroExRelayerApiWebSocketServer();
+        this.offChainWsServer = this.initOffChainApiWebSocketServer();
         this.middleware();
         this.routes();
     }
 
-    private initialiseWebSocketServer(): WebSocketServer {
+    private initZeroExRelayerApiWebSocketServer(): WebSocketServer {
         const server = http.createServer((request, response) => {
             console.log((new Date()) + ' Received request for ' + request.url);
             response.writeHead(404);
@@ -47,7 +51,24 @@ export class App {
             autoAcceptConnections: false
         });
 
-        wsServer.on('request', this.wsHandler.webSocketConnectionHandler);
+        wsServer.on('request', this.zeroExApiWsHandler.webSocketConnectionHandler);
+
+        return wsServer;
+    }
+
+    private initOffChainApiWebSocketServer(): WebSocketServer {
+        const server = http.createServer((request, response) => {
+            console.log((new Date()) + ' Received request for ' + request.url);
+            response.writeHead(404);
+            response.end();
+        });
+
+        const wsServer = new WebSocketServer({
+            httpServer: server,
+            autoAcceptConnections: false
+        });
+
+        wsServer.on('request', this.zeroExApiWsHandler.webSocketConnectionHandler);
 
         return wsServer;
     }

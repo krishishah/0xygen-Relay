@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { SignedOrder } from '0x.js';
 import axios, { AxiosRequestConfig, AxiosPromise, AxiosResponse, AxiosError } from 'axios';
-import { SerializerUtils } from '../../utils';
-import { SignedOrderSchema } from '../../types';
+import { SerializerUtils } from '../../../../utils';
+import { SignedOrderSchema } from '../../../../types';
 
 const RELAYER_HOST: string = 'http://localhost:3000';
 const RELAYER_POST_ORDER_URI: string = '/v0/order';

@@ -1,9 +1,15 @@
 import * as React from 'react';
-import { RELAYER_URL } from '../../config';
+import { RELAYER_URL } from '../../../../config';
 import { OrderbookResponse } from '@0xproject/connect/lib/src/types';
-import { WebSocketMessage, Subscribe, OrderbookSnapshot, OrderbookUpdate, TokenPair } from '../../types';
+import { 
+    WebSocketMessage, 
+    Subscribe, 
+    OrderbookSnapshot, 
+    OrderbookUpdate, 
+    TokenPair 
+} from '../../../../types';
 import { Token } from '0x.js';
-import { SerializerUtils } from '../../utils';
+import { SerializerUtils } from '../../../../utils';
 
 interface Props {
     onSnapshot: (snapshot: WebSocketMessage<OrderbookSnapshot>, tokenPair: TokenPair) => void;

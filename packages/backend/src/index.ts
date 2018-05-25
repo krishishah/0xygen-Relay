@@ -16,6 +16,7 @@ import { BlockParamLiteral } from '0x.js';
 const host: string = process.env.HOST || 'localhost';
 const httpPort: number = normalizePort(process.env.PORT || 3000) as number;
 const wsPort: number = normalizePort(process.env.WSPORT || 3001) as number;
+const wsOffChainPort: number = normalizePort(process.env.WS_OFF_CHAIN_PORT || 3002) as number;
 
 export const KOVAN_NETWORK_ID: number = 42;
 export const KOVAN_RPC: string = 'https://kovan.infura.io/WJFq23sRIxeu7Snltrjq';
@@ -43,7 +44,8 @@ async function createServer(): Promise<Express.Application> {
     return createConnection().then(async dbConnection => {
         let expressServer = Container.get(App).express;
 
-        const wsServer = Container.get(App).wsServer;
+        const zeroExWsServer = Container.get(App).zeroExWsServer;
+        const offChainWsServer = Container.get(App).offChainWsServer;
         const httpServer = http.createServer(expressServer);
 
         httpServer.listen(
@@ -53,15 +55,28 @@ async function createServer(): Promise<Express.Application> {
         );
         httpServer.on('error', onError);
 
-        wsServer
+        zeroExWsServer
             .config
             .httpServer[0]
             .listen(
                 wsPort,
                 host, 
+                () => console.log(`Off-Chain API (WS) listening on port  ${wsOffChainPort}`));
+        
+        offChainWsServer
+            .config
+            .httpServer[0]
+            .listen(
+                wsOffChainPort,
+                host, 
                 () => console.log(`Standard relayer API (WS) listening on port  ${wsPort}`));
 
-        const serverClient: ServerClient = ServerClient.createInstance(httpServer, wsServer, dbConnection);
+        const serverClient: ServerClient = ServerClient.createInstance(
+            httpServer, 
+            zeroExWsServer,
+            offChainWsServer, 
+            dbConnection
+        );
 
         return serverClient;
     }).catch(error => {

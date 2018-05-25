@@ -1,7 +1,6 @@
 import { Service } from 'typedi';
 import { PAYMENT_NETWORK_WS_HOST } from '../index';
 import {
-    W3CWebSocket,
     connection as WebSocketConnection,
     server as WebSocketServer,
     request as WebSocketRequest
@@ -18,6 +17,8 @@ import {
 } from '../types/schemas';
 import { OffChainOrderService } from '../services/offChainOrderService';
 
+var W3CWebSocket = require('websocket').w3cwebsocket;
+
 const SUBSCRIPTION_ID: number = 1;
 
 const GENESIS_TOKEN_PAIR = {
@@ -27,17 +28,19 @@ const GENESIS_TOKEN_PAIR = {
 
 @Service()
 export class OffChainPaymentNetworkWsClient {
+    
+    private webSocket;
 
-    constructor(
-        private webSocket: W3CWebSocket = new W3CWebSocket(
-            PAYMENT_NETWORK_WS_HOST, 
-            'echo-protocol'
-        ),
-        private service: OffChainOrderService
-    ) { }
+    constructor(private service: OffChainOrderService) {
+        this.init();    
+    }
 
     init = async () => {
-        if (!(this.webSocket.readyState === this.webSocket.OPEN)) {
+        if (!this.webSocket || !(this.webSocket.readyState === this.webSocket.OPEN)) {
+            this.webSocket = new W3CWebSocket(
+                PAYMENT_NETWORK_WS_HOST
+            );
+
             console.log('Connected client on port %s.', PAYMENT_NETWORK_WS_HOST);
 
             this.webSocket.onopen = async (event: Event) => {
@@ -47,17 +50,19 @@ export class OffChainPaymentNetworkWsClient {
             this.webSocket.onmessage = async (message: MessageEvent) => {
                 await this.handleWebSocketMessage(message);
             };
-
-            this.webSocket.onclose = () => {
+    
+            this.webSocket.onclose = async () => {
                 console.log('Relayer disconnected, attempting to reconnect');
-                this.init();
+                await this.init();
             };
         }
     }
   
     // tslint:disable-next-line:no-any
     send = async (event: string, payload: any) => {
-        await this.init();
+        if (!(this.webSocket.readyState === this.webSocket.OPEN)) {
+            await this.init();
+        }
         this.webSocket.send(payload);
         console.log('sent message: %s', payload);   
     }
@@ -75,20 +80,19 @@ export class OffChainPaymentNetworkWsClient {
             case 'success':
                 const paymentNetworkSubscriptionSuccessEvent 
                     = paymentNetworkEvent as PaymentNetworkWebSocketMessage<PaymentNetworkSubscrptionSuccess>;
-
                 console.log('got a success payment network event', paymentNetworkSubscriptionSuccessEvent);
                 return;
             case 'fill':
-                const paymentNetworkUpdateEvent 
+                const paymentNetworkFillEvent 
                     = paymentNetworkEvent as PaymentNetworkWebSocketMessage<PaymentNetworkUpdate>;
-                console.log('got a update payment network event', paymentNetworkUpdateEvent);
-                await this.service.onPaymentNetworkUpdate(paymentNetworkUpdateEvent.payload);
+                console.log('got a update payment network event', paymentNetworkFillEvent);
+                await this.service.onPaymentNetworkUpdate(paymentNetworkFillEvent.payload);
                 return;
             case 'cancel':
-                const paymentNetworkUpdateEvent 
+                const paymentNetworkCancelEvent 
                     = paymentNetworkEvent as PaymentNetworkWebSocketMessage<PaymentNetworkUpdate>;
-                console.log('got a update payment network event', paymentNetworkUpdateEvent);
-                await this.service.onPaymentNetworkUpdate(paymentNetworkUpdateEvent.payload);
+                console.log('got a update payment network event', paymentNetworkCancelEvent);
+                await this.service.onPaymentNetworkUpdate(paymentNetworkCancelEvent.payload);
                 return;
             case 'close':
                 console.log('got a close payment network event, reopening channel', paymentNetworkEvent);
