@@ -5,7 +5,7 @@ import { Token, OrderState, ECSignature, SignedOrder, Order, ZeroEx } from '0x.j
 import { Dictionary } from 'lodash';
 import { TokenAllowance } from '../../../App';
 import * as _ from 'lodash';
-import { RelayerWebSocketChannel } from '../../../../api/webSocket';
+import { RelayerWebSocketChannel } from '../../../../api/orderbook/zeroEx/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
 import { SerializerUtils } from '../../../../utils';
 import { BigNumber } from 'bignumber.js';
