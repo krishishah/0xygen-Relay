@@ -2,9 +2,5 @@
 	"devDependencies": {
 		"lerna": "^2.9.0"
 	},
-	"dependencies": {
-		"react-redux": "^5.0.7",
-		"redux": "^3.7.2",
-		"redux-thunk": "^2.2.0"
-	}
+	"dependencies": { }
 }
