@@ -24,7 +24,8 @@ import {
     OrderbookUpdate, 
     OrderbookSnapshot, 
     OrderbookSubscribe, 
-    OffChainOrderbookUpdate
+    OffChainOrderbookUpdate,
+    OffChainOrderbookSnapshot
 } from '../../types/schemas';
 import { Container } from 'typedi/Container';
 import { App } from '../../app';

@@ -3,8 +3,8 @@ import { SignedOrder } from '0x.js';
 import axios, { AxiosRequestConfig, AxiosPromise, AxiosResponse, AxiosError } from 'axios';
 import { SerializerUtils } from '../../../../utils';
 import { SignedOrderSchema, OffChainSignedOrder, OffChainSignedOrderSchema } from '../../../../types';
+import { RELAYER_HOST } from '../../../../config';
 
-const RELAYER_HOST: string = 'http://localhost:3002';
 const RELAYER_POST_ORDER_URI: string = '/off_chain/order';
 
 export class OffChainRelayerRestfulClient extends React.Component {
