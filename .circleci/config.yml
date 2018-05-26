@@ -39,6 +39,10 @@ jobs:
           command: npm install --global lerna
 
       - run:
+          name: Clear Cached Dependencies
+          command: lerna clean --yes
+          
+      - run:
           name: Install Package Dependencies 
           command: lerna bootstrap --stream
 
