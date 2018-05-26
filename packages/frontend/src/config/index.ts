@@ -10,4 +10,5 @@ export const TEST_RPC = 'http://localhost:8545';
 export const ETHER_TOKEN_SYMBOL = 'ETH';
 export const ETHER_DECIMAL_PLACES = 18;
 
-export const RELAYER_URL = 'ws://localhost:3001';
+export const RELAYER_ZERO_EX_WS_URL = 'ws://localhost:3001';
+export const RELAYER_OFF_CHAIN_WS_URL = 'ws://localhost:3002';

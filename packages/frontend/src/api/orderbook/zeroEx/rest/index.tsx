@@ -7,7 +7,7 @@ import { SignedOrderSchema } from '../../../../types';
 const RELAYER_HOST: string = 'http://localhost:3000';
 const RELAYER_POST_ORDER_URI: string = '/v0/order';
 
-export class RelayerRestfulClient extends React.Component {
+export class ZeroExRelayerRestfulClient extends React.Component {
 
     postSignedOrder = (signedOrder: SignedOrder): Promise<boolean> => {
         const orderJSON: SignedOrderSchema = SerializerUtils.SignedOrdertoJSON(signedOrder);

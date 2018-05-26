@@ -2,7 +2,7 @@ import * as React from 'react';
 import { SignedOrder, ZeroEx } from '0x.js';
 import { Button, Form, ButtonProps, Segment } from 'semantic-ui-react';
 import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
-import { RelayerRestfulClient } from '../../../../api/orderbook/zeroEx/rest';
+import { ZeroExRelayerRestfulClient } from '../../../../api/orderbook/zeroEx/rest';
 
 interface Props {
     signedOrder: SignedOrder | undefined;
@@ -15,7 +15,7 @@ interface State {
 
 export default class SubmitSignedOrder extends React.Component<Props, State> {
 
-    relayerRestfulClient: RelayerRestfulClient | null;
+    relayerRestfulClient: ZeroExRelayerRestfulClient | null;
 
     constructor(props: Props) {
         super(props);
@@ -50,7 +50,7 @@ export default class SubmitSignedOrder extends React.Component<Props, State> {
 
             return(
                 <Form style={{ height: '100%' }}>
-                    <RelayerRestfulClient ref={ref => (this.relayerRestfulClient = ref)} />
+                    <ZeroExRelayerRestfulClient ref={ref => (this.relayerRestfulClient = ref)} />
                     <Form.Field>
                         <label>Signed Order:</label>
                         <Form.TextArea 

@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { RELAYER_URL } from '../../../../config';
+import { RELAYER_ZERO_EX_WS_URL } from '../../../../config';
 import { OrderbookResponse } from '@0xproject/connect/lib/src/types';
 import { 
     WebSocketMessage, 
-    Subscribe, 
+    OrderbookSubscribe, 
     OrderbookSnapshot, 
     OrderbookUpdate, 
     TokenPair 
@@ -39,11 +39,11 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
 
     initialiseConnection = async () => {
         if (!this.webSocket) {
-            this.webSocket = new WebSocket(RELAYER_URL);
+            this.webSocket = new WebSocket(RELAYER_ZERO_EX_WS_URL);
         }
 
         if (!(this.webSocket.readyState === this.webSocket.OPEN)) {
-            console.log('Connected client on port %s.', RELAYER_URL);
+            console.log('Connected client on port %s.', RELAYER_ZERO_EX_WS_URL);
 
             this.webSocket.onopen = async (event: Event) => {
                 this.state.subscriptionIdMap.forEach(async (v: TokenPair, k: number, map) => {
@@ -111,7 +111,7 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
         // Temporarily reuse current requestId for new subscriptions
         const subscriptionCount = requestId ? requestId : this.state.subscriptionCount;
 
-        const subscribeMessage: WebSocketMessage<Subscribe> = {
+        const subscribeMessage: WebSocketMessage<OrderbookSubscribe> = {
             type: 'subscribe',
             channel: 'orderbook',
             requestId: subscriptionCount,

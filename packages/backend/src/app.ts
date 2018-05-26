@@ -9,10 +9,10 @@ import { Service } from 'typedi';
 import { Container } from 'typedi/Container';
 import { server as WebSocketServer } from 'websocket';
 import * as http from 'http';
-import { OffChainWebSocketHandler } from './routes/zeroExApi/webSocket';
+import { OffChainWebSocketHandler } from './routes/offChainApi/webSocket';
 import * as cors from 'cors';
 import { OffChainPaymentNetworkRestRoutes } from './routes/offChainApi/rest';
-import { WebSocketHandler } from './routes/offChainApi/webSocket';
+import { WebSocketHandler } from './routes/zeroExApi/webSocket';
 
 // Creates and configures an ExpressJS web server.
 @Service()

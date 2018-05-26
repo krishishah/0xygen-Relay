@@ -15,13 +15,16 @@ import {
     ORDER_UPDATED, 
     ORDER_ADDED, 
     ORDER_REMOVED,
-    OrderRemoved
+    OrderRemoved,
+    OFF_CHAIN_ORDER_ADDED,
+    OffChainOrderAdded
 } from '../../types/events';
 import { 
     OrderbookWebSocketMessage, 
     OrderbookUpdate, 
     OrderbookSnapshot, 
-    OrderbookSubscribe 
+    OrderbookSubscribe, 
+    OffChainOrderbookUpdate
 } from '../../types/schemas';
 import { Container } from 'typedi/Container';
 import { App } from '../../app';
@@ -34,7 +37,7 @@ interface WebSocketConnectionMetadata {
 }
 
 @Service()
-export class WebSocketHandler {
+export class OffChainWebSocketHandler {
 
     private connectionMetadataSet: Set<WebSocketConnectionMetadata>;
 
@@ -117,11 +120,11 @@ export class WebSocketHandler {
                         quoteTokenAddress
                     ).then(
                         orderbook => {
-                            const returnMessage: OrderbookWebSocketMessage<OrderbookSnapshot> = {
+                            const returnMessage: OrderbookWebSocketMessage<OffChainOrderbookSnapshot> = {
                                 type: 'snapshot',
                                 channel: 'orderbook',
                                 requestId,
-                                payload: SerializerUtils.TokenPairOrderbooktoJSON(orderbook)
+                                payload: SerializerUtils.OffChainTokenPairOrderbooktoJSON(orderbook)
                             };
                             socketConnection.sendUTF(JSON.stringify(returnMessage));
                         }
@@ -132,9 +135,9 @@ export class WebSocketHandler {
     }
 
     private handleOrderbookUpdate(
-        data: OrderEvent<OrderAdded | OrderUpdated | OrderRemoved>
+        data: OrderEvent<OffChainOrderAdded>
     ) { 
-        const { makerTokenAddress, takerTokenAddress } = data.payload;
+        const { makerTokenAddress, takerTokenAddress } = data.payload.order;
         const subChannels = [
                              `${makerTokenAddress}-${takerTokenAddress}`, 
                              `${takerTokenAddress}-${makerTokenAddress}`
@@ -149,13 +152,11 @@ export class WebSocketHandler {
                                   || activeConnection.subscriptionIdMap.get(subChannels[1])
                                   || 0;
 
-                // ORDER_ADDED, ORDER_UPDATED & ORDER_DELETED all result in Update WS Messages
-                // being sent according to the 0x protocol.
-                const orderAddedMessage: OrderbookWebSocketMessage<OrderbookUpdate> = {
+                const orderAddedMessage: OrderbookWebSocketMessage<OffChainOrderbookUpdate> = {
                     type: 'update',
                     channel: 'orderbook',
                     requestId,
-                    payload: SerializerUtils.SignedOrdertoJSON(data.payload.order),
+                    payload: SerializerUtils.OffChainSignedOrdertoJSON(data.payload.order),
                 };
                 
                 activeConnection.socketConnection.sendUTF(JSON.stringify(orderAddedMessage));
@@ -168,8 +169,6 @@ export class WebSocketHandler {
      * listeners.
      */
     private init() {
-        this.pubSubClient.subscribe(ORDER_UPDATED, this.handleOrderbookUpdate.bind(this));
-        this.pubSubClient.subscribe(ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
-        this.pubSubClient.subscribe(ORDER_REMOVED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(OFF_CHAIN_ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
     }
 }

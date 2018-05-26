@@ -30,7 +30,10 @@ export interface TokenPairOrderbook {
     asks: SignedOrder[];
 }
 
-export interface OrderbookWebSocketMessage<T extends OrderbookUpdate | OrderbookSubscribe | OrderbookSnapshot> {
+export type OrderbookWsMessageType 
+    = OrderbookUpdate | OrderbookSubscribe | OrderbookSnapshot | OffChainOrderbookUpdate | OffChainOrderbookSnapshot;
+
+export interface OrderbookWebSocketMessage<T extends OrderbookWsMessageType> {
     type: string;
     channel: string;
     requestId: number;
@@ -147,6 +150,10 @@ export interface PaymentNetworkSubscribe {
     baseTokenAddress: string;
     quoteTokenAddress: string;
 }
+
+export type OffChainOrderbookUpdate = OffChainSignedOrderSchema;
+
+export type OffChainOrderbookSnapshot = OffChainTokenPairOrderbookSchema;
 
 export interface OffChainSignedOrderStatus {
     orderHash: string;

@@ -8,7 +8,13 @@ import {
     OffChainTokenBalancesSchema, 
     OffChainTokenBalances, 
     TokenBalances, 
-    OffChainTokenSchema 
+    OffChainTokenSchema, 
+    OffChainSignedOrderStatusSchema,
+    OffChainSignedOrderStatus,
+    OffChainSignedOrderSchema,
+    OffChainSignedOrder,
+    OffChainTokenPairOrderbookSchema,
+    OffChainTokenPairOrderbook
 } from '../types';
 import { OrderRelevantState } from '0x.js/lib/src/types';
 
@@ -82,5 +88,55 @@ export class SerializerUtils {
             userAddress: schema.userAddress,
             tokenBalances: balances
         };
+    }
+
+    public static OffChainTokenPairOrderbooktoJSON(
+        tokenPairOrderbook: OffChainTokenPairOrderbook
+    ): OffChainTokenPairOrderbookSchema {
+        const tokenPairOrderbookSchema: OffChainTokenPairOrderbookSchema  = {
+            bids: tokenPairOrderbook.bids.map(bid => SerializerUtils.OffChainSignedOrdertoJSON(bid)),
+            asks: tokenPairOrderbook.asks.map(ask => SerializerUtils.OffChainSignedOrdertoJSON(ask))
+        };
+        return tokenPairOrderbookSchema;
+    }
+
+    public static OffChainSignedOrdertoJSON(signedOrder: OffChainSignedOrder): OffChainSignedOrderSchema {
+        return {
+            ecSignature: signedOrder.ecSignature,
+            maker: signedOrder.maker,
+            taker: signedOrder.taker,
+            makerTokenAmount: signedOrder.makerTokenAmount.toFixed(),
+            takerTokenAmount: signedOrder.takerTokenAmount.toFixed(),
+            makerTokenAddress: signedOrder.makerTokenAddress,
+            takerTokenAddress: signedOrder.takerTokenAddress,
+            salt: signedOrder.salt.toFixed(),
+            expirationUnixTimestampSec: signedOrder.expirationUnixTimestampSec.toFixed()
+        };
+    } 
+
+    public static OffChainSignedOrderfromJSON(signedOrderObj: OffChainSignedOrderSchema): OffChainSignedOrder {
+        const signedOrder: OffChainSignedOrder = {
+            ecSignature: signedOrderObj.ecSignature,
+            maker: signedOrderObj.maker,
+            taker: signedOrderObj.taker,
+            makerTokenAmount: new BigNumber(signedOrderObj.makerTokenAmount),
+            takerTokenAmount: new BigNumber(signedOrderObj.takerTokenAmount),
+            makerTokenAddress: signedOrderObj.makerTokenAddress,
+            takerTokenAddress: signedOrderObj.takerTokenAddress,
+            salt: new BigNumber(signedOrderObj.salt),
+            expirationUnixTimestampSec: new BigNumber(signedOrderObj.expirationUnixTimestampSec)
+        };
+        return signedOrder;
+    }
+
+    public static OrderStatusFromJSON(schema: OffChainSignedOrderStatusSchema): OffChainSignedOrderStatus {
+        const status: OffChainSignedOrderStatus = {
+            orderHash: schema.orderHash,
+            isValid: schema.isValid,
+            signedOrder: SerializerUtils.OffChainSignedOrderfromJSON(schema.signedOrder),
+            remainingFillableMakerTokenAmount: new BigNumber(schema.remainingFillableMakerTokenAmount),
+            remainingFillableTakerTokenAmount: new BigNumber(schema.remainingFillableTakerTokenAmount)
+        };
+        return status;
     }
 }

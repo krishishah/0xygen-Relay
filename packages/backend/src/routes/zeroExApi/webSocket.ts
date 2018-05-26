@@ -15,8 +15,7 @@ import {
     ORDER_UPDATED, 
     ORDER_ADDED, 
     ORDER_REMOVED,
-    OrderRemoved,
-    OFF_CHAIN_ORDER_ADDED
+    OrderRemoved
 } from '../../types/events';
 import { 
     OrderbookWebSocketMessage, 
@@ -35,7 +34,7 @@ interface WebSocketConnectionMetadata {
 }
 
 @Service()
-export class OffChainWebSocketHandler {
+export class WebSocketHandler {
 
     private connectionMetadataSet: Set<WebSocketConnectionMetadata>;
 
@@ -169,6 +168,8 @@ export class OffChainWebSocketHandler {
      * listeners.
      */
     private init() {
-        this.pubSubClient.subscribe(OFF_CHAIN_ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(ORDER_UPDATED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(ORDER_ADDED, this.handleOrderbookUpdate.bind(this));
+        this.pubSubClient.subscribe(ORDER_REMOVED, this.handleOrderbookUpdate.bind(this));
     }
 }

@@ -56,7 +56,7 @@ import {
     KOVAN_RPC, 
     KOVAN_NETWORK_ID, 
     ETHER_DECIMAL_PLACES, 
-    RELAYER_URL,   
+    RELAYER_ZERO_EX_WS_URL,   
     TEST_RPC, 
     TEST_RPC_NETWORK_ID 
 } from '../../config';
