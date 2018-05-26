@@ -35,6 +35,10 @@ jobs:
           command: sudo chown -R $(whoami) $(npm config get prefix)/{lib/node_modules,bin,share}
 
       - run:
+          name: Install NPM 6.1.0
+          command: npm install npm@6.1.0 -g
+          
+      - run:
           name: Install Lerna
           command: npm install --global lerna
 
