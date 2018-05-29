@@ -12,6 +12,7 @@
     "@0xproject/web3-wrapper": "0.1.10",
     "@types/socket.io": "^1.4.33",
     "antd": "^3.5.1",
+    "async-validator": "^1.8.1",
     "axios": "^0.18.0",
     "ethereum-blockies": "^0.1.1",
     "lodash": "4.17.5",
