@@ -6,7 +6,12 @@
   "directories": {
     "test": "tests"
   },
+  "engines": {
+    "npm": "6.1.0",
+    "node": "9.3.0"
+  },
   "scripts": {
+    "start_prod": "node -r dotenv/config dist/index.js dotenv_config_path=.env.prod",
     "start": "node -r dotenv/config dist/index.js dotenv_config_path=.env.dev",
     "test": "./node_modules/.bin/mocha -r ts-node/register 'tests/**/*.test.ts' --exit",
     "build": "gulp scripts",
