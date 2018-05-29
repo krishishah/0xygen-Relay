@@ -7,11 +7,11 @@ import {
     OffChainOrderbookSnapshot,
     OrderbookSubscribe
 } from '../../../../types';
-import { RELAYER_ZERO_EX_WS_URL } from '../../../../config';
+import { RELAYER_ZERO_EX_WS_URL, RELAYER_OFF_CHAIN_WS_URL } from '../../../../config';
 
 interface Props {
-    onSnapshot: (update: WebSocketMessage<OffChainOrderbookSnapshot>, tokenPair: TokenPair) => void;
-    onUpdate: (update: WebSocketMessage<OffChainOrderbookUpdate>, tokenPair: TokenPair) => void;
+    onSnapshot: (update: OffChainOrderbookSnapshot, tokenPair: TokenPair) => void;
+    onUpdate: (update: OffChainOrderbookUpdate, tokenPair: TokenPair) => void;
 }
 
 interface State {
@@ -37,11 +37,11 @@ export class OffChainRelayerWebSocketChannel extends React.Component<Props, Stat
 
     initialiseConnection = async () => {
         if (!this.webSocket) {
-            this.webSocket = new WebSocket(RELAYER_ZERO_EX_WS_URL);
+            this.webSocket = new WebSocket(RELAYER_OFF_CHAIN_WS_URL);
         }
 
         if (!(this.webSocket.readyState === this.webSocket.OPEN)) {
-            console.log('Connected client on port %s.', RELAYER_ZERO_EX_WS_URL);
+            console.log('Connected client on port %s.', RELAYER_OFF_CHAIN_WS_URL);
 
             this.webSocket.onopen = async (event: Event) => {
                 this.state.subscriptionIdMap.forEach(async (v: TokenPair, k: number, map) => {
@@ -79,7 +79,7 @@ export class OffChainRelayerWebSocketChannel extends React.Component<Props, Stat
                 const orderbookSnapshotEvent = orderbookEvent as WebSocketMessage<OffChainOrderbookSnapshot>;
                 console.log('got a snapshot orderbook event', orderbookSnapshotEvent);
                 await this.props.onSnapshot(
-                    orderbookSnapshotEvent, 
+                    orderbookSnapshotEvent.payload, 
                     this.state.subscriptionIdMap.get(orderbookSnapshotEvent.requestId) as TokenPair
                 );
                 return;
@@ -87,7 +87,7 @@ export class OffChainRelayerWebSocketChannel extends React.Component<Props, Stat
                 const orderbookUpdateEvent = orderbookEvent as WebSocketMessage<OffChainOrderbookUpdate>;
                 console.log('got a update orderbook event', orderbookUpdateEvent);
                 await this.props.onUpdate(
-                    orderbookUpdateEvent,
+                    orderbookUpdateEvent.payload,
                     this.state.subscriptionIdMap.get(orderbookUpdateEvent.requestId) as TokenPair
                 );
                 return;

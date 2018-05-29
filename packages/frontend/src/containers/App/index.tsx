@@ -12,7 +12,8 @@ import { BigNumber } from 'bignumber.js';
 import { Dictionary } from 'lodash';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import SetAllowances from '../Steps/Shared/SetAllowances';
-import TradeTokens from '../Steps/Taker/TradeTokens';
+import ZeroExTradeTokens from '../Steps/Taker/ZeroEx/TradeTokens';
+import OffChainTradeTokens from '../Steps/Taker/OffChain/TradeTokens';
 import WrapEth from '../Steps/Taker/WrapEth';
 import CreateOrder from '../Steps/Maker/CreateOrder';
 import SubmitSignedOrder from '../Steps/Maker/SubmitSignedOrder';
@@ -33,7 +34,8 @@ import {
     Message,
     GridColumn,
     MenuItemProps,
-    Button
+    Button,
+    ButtonProps
 } from 'semantic-ui-react';
 import { 
     InjectedWeb3Subprovider, 
@@ -61,7 +63,7 @@ import {
     TEST_RPC_NETWORK_ID 
 } from '../../config';
 import { PaymentNetworkRestfulClient } from '../../api/paymentNetwork/rest';
-import { OffChainTokenBalances } from '../../types';
+import { OffChainTokenBalances, OffChainSignedOrder } from '../../types';
 
 const Web3ProviderEngine = require('web3-provider-engine');
 
@@ -74,6 +76,8 @@ export interface TokenAllowance {
     token: Token;
     allowance: BigNumber;
 }
+
+export type UserSettlementWorkflow = 'Off-Chain' | 'On-Chain';
 
 interface Props {}
 
@@ -88,7 +92,10 @@ interface State {
     zeroExRegistryTokens: Token[];
     transactionMessage: UserActionMessageProps;
     activeUserWorkflow: UserWorflow;
-    submitableMakerSignedOrder: undefined | SignedOrder;
+    submitableZeroExMakerSignedOrder: undefined | SignedOrder;
+    submitableOffChainMakerSignedOrder: undefined | OffChainSignedOrder;
+    activeSettlementWorkflow: UserSettlementWorkflow;
+    
 }
 
 export default class App extends React.Component<Props, State> {
@@ -116,7 +123,9 @@ export default class App extends React.Component<Props, State> {
                 dismissMessage: this.dismissTransactionMessage
             },
             activeUserWorkflow: 'Taker',
-            submitableMakerSignedOrder: undefined
+            submitableZeroExMakerSignedOrder: undefined,
+            submitableOffChainMakerSignedOrder: undefined,
+            activeSettlementWorkflow: 'On-Chain'
         };
     }
 
@@ -352,9 +361,20 @@ export default class App extends React.Component<Props, State> {
             this.setState({ activeUserWorkflow: 'Maker' }); 
     }
 
+    private onClickOnChainWorkflow = async (event: React.MouseEvent<HTMLButtonElement>, data: ButtonProps) => {
+        await this.setState({ activeSettlementWorkflow: 'On-Chain' });
+    }
+
+    private onClickOffChainWorkflow = async (event: React.MouseEvent<HTMLButtonElement>, data: ButtonProps) => {
+        await this.setState({ activeSettlementWorkflow: 'Off-Chain' });
+    }
+
     private renderMakerWorkflow = (): any => {
         let makerStepToRender;
         let activeMakerStep = this.state.activeMakerStep;
+        const zeroExMakerOrder = this.state.submitableZeroExMakerSignedOrder;
+        const offChainMakerOrder = this.state.submitableOffChainMakerSignedOrder;
+        const activeSettlementWorkflow = this.state.activeSettlementWorkflow;
 
         switch (activeMakerStep) {
             case 'Allowance': {
@@ -380,7 +400,9 @@ export default class App extends React.Component<Props, State> {
                         setTransactionMessageState={this.setTransactionMessageState}
                         accounts={this.state.accounts}
                         progressMakerStep={this.changeMakerStep}
-                        setSubmitableSignedOrder={this.setSubmitableSignedOrder}
+                        setSubmitableZeroExSignedOrder={this.setSubmitableZeroExSignedOrder}
+                        setSubmitableOffChainSignedOrder={this.setSubmitableOffChainSignedOrder}
+                        activeSettlementWorkflow={this.state.activeSettlementWorkflow}
                     /> 
                 );
                 break;
@@ -389,7 +411,9 @@ export default class App extends React.Component<Props, State> {
             case 'SubmitOrder': {
                 makerStepToRender = (
                     <SubmitSignedOrder
-                        signedOrder={this.state.submitableMakerSignedOrder}
+                        zeroExSignedOrder={this.state.submitableZeroExMakerSignedOrder}
+                        offChainSignedOrder={this.state.submitableOffChainMakerSignedOrder}
+                        activeSettlementWorkflow={this.state.activeSettlementWorkflow}
                         setTransactionMessageState={this.setTransactionMessageState}
                     />
                 );
@@ -421,7 +445,11 @@ export default class App extends React.Component<Props, State> {
                         <SimpleMakerTradeStepsHeader 
                             activeStep={this.state.activeMakerStep}
                             changeStep={this.changeMakerStep}
-                            isSubmitOrderDisabled={this.state.submitableMakerSignedOrder === undefined}
+                            isSubmitOrderDisabled={
+                                (zeroExMakerOrder === undefined && activeSettlementWorkflow === 'On-Chain') 
+                                ||
+                                (offChainMakerOrder === undefined && activeSettlementWorkflow === 'Off-Chain')
+                            }
                         />
                     </Card.Header>
                 </Card.Content>
@@ -447,8 +475,12 @@ export default class App extends React.Component<Props, State> {
         );
     }
 
-    private setSubmitableSignedOrder = async (signedOrder: SignedOrder) => {
-        await this.setState({submitableMakerSignedOrder: signedOrder});
+    private setSubmitableOffChainSignedOrder = async (signedOrder: OffChainSignedOrder) => {
+        await this.setState({submitableOffChainMakerSignedOrder: signedOrder});
+    }
+
+    private setSubmitableZeroExSignedOrder = async (signedOrder: SignedOrder) => {
+        await this.setState({submitableZeroExMakerSignedOrder: signedOrder});
     }
 
     private renderTakerWorkflow = (): any => {
@@ -473,8 +505,16 @@ export default class App extends React.Component<Props, State> {
                 break;
             }
             case 'Trade': {
-                takerStepToRender = (
-                    <TradeTokens 
+                takerStepToRender = this.state.activeSettlementWorkflow === 'On-Chain' ? (
+                    <ZeroExTradeTokens 
+                        zeroEx={this.zeroEx}
+                        tokensWithAllowance={this.state.tokensWithAllowances} 
+                        zeroExProxyTokens={this.state.zeroExRegistryTokens}
+                        setTransactionMessageState={this.setTransactionMessageState}
+                        accounts={this.state.accounts}
+                    />
+                ) : (
+                    <OffChainTradeTokens
                         zeroEx={this.zeroEx}
                         tokensWithAllowance={this.state.tokensWithAllowances} 
                         zeroExProxyTokens={this.state.zeroExRegistryTokens}
@@ -578,8 +618,22 @@ export default class App extends React.Component<Props, State> {
                         }}
                     >
                         <Button.Group size="large">
-                            <Button color="grey" content="Blue">On-Chain</Button>
-                            <Button basic color="grey" content="Black">Off-Chain</Button>
+                            <Button 
+                                basic={this.state.activeSettlementWorkflow !== 'On-Chain'} 
+                                onClick={this.onClickOnChainWorkflow}
+                                color="grey" 
+                                content="Blue"
+                            >
+                            On-Chain
+                            </Button>
+                            <Button 
+                                basic={this.state.activeSettlementWorkflow !== 'Off-Chain'} 
+                                onClick={this.onClickOffChainWorkflow}
+                                color="grey" 
+                                content="Black"
+                            >
+                            Off-Chain
+                            </Button>
                         </Button.Group>
                     </Grid>
                     {userWorkflow}

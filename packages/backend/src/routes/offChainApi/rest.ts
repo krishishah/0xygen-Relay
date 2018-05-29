@@ -4,7 +4,7 @@ import { Service, Container } from 'typedi';
 import { OffChainOrderService } from '../../services/offChainOrderService';
 import { SignedOrder } from '0x.js';
 import { SerializerUtils } from '../../utils/serialization';
-import { SignedOrderSchema } from '../../types/schemas';
+import { SignedOrderSchema, OffChainSignedOrderSchema } from '../../types/schemas';
 import { ZeroEx } from '0x.js/lib/src/0x';
 
 @Service()
@@ -31,7 +31,6 @@ export class OffChainPaymentNetworkRestRoutes {
                 res.status(201).json(SerializerUtils.OffChainTokenPairOrderbooktoJSON(orderBook));
             })
             .catch(error => {
-                // TODO: Sort out error handling
                 res.status(404).send({
                     error: error.statusMessage
                 });
@@ -71,8 +70,8 @@ export class OffChainPaymentNetworkRestRoutes {
      */
     public postOrder(req: Request, res: Response, next: NextFunction) {
         const { body } = req;
-        const signedOrderSchema = body as SignedOrderSchema;
-        const signedOrder = SerializerUtils.SignedOrderfromJSON(signedOrderSchema);
+        const signedOrderSchema = body as OffChainSignedOrderSchema;
+        const signedOrder = SerializerUtils.OffChainSignedOrderfromJSON(signedOrderSchema);
         this.orderService
             .postOrder(signedOrder)
             .then((value: void) => {

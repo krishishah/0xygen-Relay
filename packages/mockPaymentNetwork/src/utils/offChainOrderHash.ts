@@ -14,7 +14,7 @@ import * as _ from 'lodash';
 
 function bigNumberToBN(value: BigNumber): BN {
     const base = 10;
-    return new BN(value.toString(), base);
+    return new BN(value.toFixed(), base);
 }
 
 export function getOffChainOrderHashHex(order: OffChainOrder | OffChainSignedOrder): string {
@@ -35,7 +35,49 @@ export function getOffChainOrderHashHex(order: OffChainOrder | OffChainSignedOrd
             value: bigNumberToBN(order.expirationUnixTimestampSec),
             type: SolidityTypes.Uint256,
         },
-        { value: bigNumberToBN(order.salt), type: SolidityTypes.Uint256 },
+        { value: bigNumberToBN(order.salt), type: SolidityTypes.Uint256 }
+    ];
+    const types = _.map(orderParts, o => o.type);
+    const values = _.map(orderParts, o => o.value);
+    const hashBuff = ethABI.soliditySHA3(types, values);
+    const hashHex = ethUtil.bufferToHex(hashBuff);
+    return hashHex;
+}
+
+export function getOffChainSignedOrderHashHex(order: OffChainSignedOrder): string {
+    const orderParts = [
+        { value: order.maker, type: SolidityTypes.Address },
+        { value: order.taker, type: SolidityTypes.Address },
+        { value: order.makerTokenAddress, type: SolidityTypes.Address },
+        { value: order.takerTokenAddress, type: SolidityTypes.Address },
+        {
+            value: bigNumberToBN(order.makerTokenAmount),
+            type: SolidityTypes.Uint256,
+        },
+        {
+            value: bigNumberToBN(order.takerTokenAmount),
+            type: SolidityTypes.Uint256,
+        },
+        {
+            value: bigNumberToBN(order.expirationUnixTimestampSec),
+            type: SolidityTypes.Uint256,
+        },
+        { 
+            value: bigNumberToBN(order.salt), 
+            type: SolidityTypes.Uint256 
+        },
+        { 
+            value: order.ecSignature.v, 
+            type: SolidityTypes.Uint8 
+        },
+        { 
+            value: order.ecSignature.r, 
+            type: 'bytes32'
+        },
+        { 
+            value: order.ecSignature.s, 
+            type: 'bytes32'
+        }
     ];
     const types = _.map(orderParts, o => o.type);
     const values = _.map(orderParts, o => o.value);

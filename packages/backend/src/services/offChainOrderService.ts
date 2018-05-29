@@ -126,9 +126,6 @@ export class OffChainOrderService {
                     orderHashHex
                 );
             })
-            .catch(error => {
-                throw error;
-            })
             .then((_: EnrichedSignedOrder) => {
                 const orderEvent: OrderEvent<OffChainOrderAdded> = {
                     type: OFF_CHAIN_ORDER_ADDED,
@@ -139,6 +136,9 @@ export class OffChainOrderService {
                     }
                 };
                 this.pubSubClient.publish(OFF_CHAIN_ORDER_ADDED, orderEvent);
+            })
+            .catch(error => {
+                throw error;
             }
         );
     }
@@ -164,7 +164,7 @@ export class OffChainOrderService {
 
         return this
             .httpClient
-            .getOrderStatus(orderHashHex)
+            .getOrderStatus(signedOrder)
             .then((status: OffChainSignedOrderStatus) => {
                 if (status.isValid) {
                     enrichedOrder.remainingMakerTokenAmount = status.remainingFillableMakerTokenAmount;
@@ -175,7 +175,7 @@ export class OffChainOrderService {
                 return enrichedOrder;
             })
             .catch(err => {
-                throw Error(err.message);
+                throw err;
             }
         );          
     }

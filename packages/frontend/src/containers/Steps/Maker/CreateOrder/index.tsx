@@ -3,11 +3,10 @@ import { promisify } from '@0xproject/utils';
 import Faucet from '../../../../components/Faucet';
 import { Token, OrderState, ECSignature, SignedOrder, Order, ZeroEx } from '0x.js';
 import { Dictionary } from 'lodash';
-import { TokenAllowance } from '../../../App';
+import { TokenAllowance, UserSettlementWorkflow } from '../../../App';
 import * as _ from 'lodash';
-import { RelayerWebSocketChannel } from '../../../../api/orderbook/zeroEx/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
-import { SerializerUtils } from '../../../../utils';
+import { Utils } from '../../../../utils';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
 import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
@@ -20,7 +19,9 @@ import {
     OrderbookUpdate, 
     TokenPairOrderbook, 
     EnrichedSignedOrder,
-    EnrichedTokenPairOrderbook
+    EnrichedTokenPairOrderbook,
+    OffChainSignedOrder,
+    OffChainOrder
 } from '../../../../types';
 import { 
     DropdownProps, 
@@ -44,7 +45,10 @@ interface Props {
     accounts: string[];
     setTransactionMessageState: (status: UserActionMessageStatus, message?: string) => void;
     progressMakerStep: (newStep: SimpleMakerTradeStep) => void;
-    setSubmitableSignedOrder: (signedOrder: SignedOrder) => void;
+    setSubmitableZeroExSignedOrder: (signedOrder: SignedOrder) => void;
+    setSubmitableOffChainSignedOrder: (signedOrder: OffChainSignedOrder) => void;
+    activeSettlementWorkflow: UserSettlementWorkflow;
+
 }
 
 interface State {
@@ -160,36 +164,63 @@ export default class TradeTokens extends React.Component<Props, State> {
             return;
         }
 
-        let order: Order = {
-            maker: this.props.accounts[0],
-            taker: GENESIS_ADDR,
-            makerFee: new BigNumber(0),
-            takerFee: new BigNumber(0),
-            makerTokenAmount: quoteTokenQuantity,
-            takerTokenAmount: baseTokenQuantity,
-            makerTokenAddress: quoteToken.address,
-            takerTokenAddress: baseToken.address,
-            salt: ZeroEx.generatePseudoRandomSalt(),
-            exchangeContractAddress: this.props.zeroEx.exchange.getContractAddress(),
-            feeRecipient: GENESIS_ADDR,
-            expirationUnixTimestampSec: new BigNumber(expirationUnixTimestampSec)
-        };
-
-        const orderHash = ZeroEx.getOrderHashHex(order);
-
-        const signature: ECSignature = await this.props.zeroEx.signOrderHashAsync(
-            orderHash, 
-            this.props.accounts[0],
-            true
-        );
-
-        const signedOrder: SignedOrder = {
-            ecSignature: signature,
-            ...order
-        };
-
-        await this.props.setSubmitableSignedOrder(signedOrder);
-
+        if (this.props.activeSettlementWorkflow === 'On-Chain') {
+            let order: Order = {
+                maker: this.props.accounts[0],
+                taker: GENESIS_ADDR,
+                makerFee: new BigNumber(0),
+                takerFee: new BigNumber(0),
+                makerTokenAmount: quoteTokenQuantity,
+                takerTokenAmount: baseTokenQuantity,
+                makerTokenAddress: quoteToken.address,
+                takerTokenAddress: baseToken.address,
+                salt: ZeroEx.generatePseudoRandomSalt(),
+                exchangeContractAddress: this.props.zeroEx.exchange.getContractAddress(),
+                feeRecipient: GENESIS_ADDR,
+                expirationUnixTimestampSec: new BigNumber(expirationUnixTimestampSec)
+            };
+    
+            const orderHash = ZeroEx.getOrderHashHex(order);
+    
+            const signature: ECSignature = await this.props.zeroEx.signOrderHashAsync(
+                orderHash, 
+                this.props.accounts[0],
+                true
+            );
+    
+            const signedOrder: SignedOrder = {
+                ecSignature: signature,
+                ...order
+            };
+    
+            await this.props.setSubmitableZeroExSignedOrder(signedOrder);
+        } else {
+            let order: OffChainOrder = {
+                maker: this.props.accounts[0],
+                taker: GENESIS_ADDR,
+                makerTokenAmount: quoteTokenQuantity,
+                takerTokenAmount: baseTokenQuantity,
+                makerTokenAddress: quoteToken.address,
+                takerTokenAddress: baseToken.address,
+                salt: ZeroEx.generatePseudoRandomSalt(),
+                expirationUnixTimestampSec: new BigNumber(expirationUnixTimestampSec)
+            };
+    
+            const orderHash = Utils.GetOffChainOrderHashHex(order);
+    
+            const signature: ECSignature = await this.props.zeroEx.signOrderHashAsync(
+                orderHash, 
+                this.props.accounts[0],
+                true
+            );
+    
+            const signedOrder: OffChainSignedOrder = {
+                ecSignature: signature,
+                ...order
+            };
+    
+            await this.props.setSubmitableOffChainSignedOrder(signedOrder);
+        }
         await this.props.progressMakerStep('SubmitOrder');
     }
 

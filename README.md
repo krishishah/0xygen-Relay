@@ -1,1 +1,1 @@
-[![CircleCI](https://circleci.com/gh/krishishah/0xygen-Relay/tree/master.svg?style=svg&circle-token=49b2dfbb33fe121a48d0350da22382561af5d17f)]
+![CircleCI](https://circleci.com/gh/krishishah/0xygen-Relay/tree/master.svg?style=svg&circle-token=49b2dfbb33fe121a48d0350da22382561af5d17f)

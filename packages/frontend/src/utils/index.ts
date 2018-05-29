@@ -14,11 +14,27 @@ import {
     OffChainSignedOrderSchema,
     OffChainSignedOrder,
     OffChainTokenPairOrderbookSchema,
-    OffChainTokenPairOrderbook
+    OffChainTokenPairOrderbook,
+    OffChainOrder,
+    OffChainFillOrder,
+    OffChainBatchFillOrder,
+    OffChainFillOrderRequest,
+    OffChainFillOrderRequestSchema,
+    OffChainBatchFillOrderSchema,
+    OffChainBatchFillOrderRequest,
+    OffChainBatchFillOrderRequestSchema,
+    OrderFilledQuantities,
+    OrderFilledQuantitiesSchema
 } from '../types';
 import { OrderRelevantState } from '0x.js/lib/src/types';
+import * as ethABI from 'ethereumjs-abi';
+import * as ethUtil from 'ethereumjs-util';
+import { SolidityTypes } from '@0xproject/types';
+import * as _ from 'lodash';
 
-export class SerializerUtils {
+const BN = require('bn.js');
+
+export class Utils {
 
     public static SignedOrdertoJSON(signedOrder: SignedOrder): SignedOrderSchema {
         return {
@@ -59,8 +75,8 @@ export class SerializerUtils {
 
     public static TokenPairOrderbookFromJSON(tokenPairOrderbookSchema: TokenPairOrderbookSchema): TokenPairOrderbook {
         return {
-            bids: tokenPairOrderbookSchema.bids.map(bid => SerializerUtils.SignedOrderfromJSON(bid)),
-            asks: tokenPairOrderbookSchema.asks.map(ask => SerializerUtils.SignedOrderfromJSON(ask))
+            bids: tokenPairOrderbookSchema.bids.map(bid => Utils.SignedOrderfromJSON(bid)),
+            asks: tokenPairOrderbookSchema.asks.map(ask => Utils.SignedOrderfromJSON(ask))
         };
     }
 
@@ -90,14 +106,14 @@ export class SerializerUtils {
         };
     }
 
-    public static OffChainTokenPairOrderbooktoJSON(
-        tokenPairOrderbook: OffChainTokenPairOrderbook
-    ): OffChainTokenPairOrderbookSchema {
-        const tokenPairOrderbookSchema: OffChainTokenPairOrderbookSchema  = {
-            bids: tokenPairOrderbook.bids.map(bid => SerializerUtils.OffChainSignedOrdertoJSON(bid)),
-            asks: tokenPairOrderbook.asks.map(ask => SerializerUtils.OffChainSignedOrdertoJSON(ask))
+    public static OffChainTokenPairOrderbookFromJSON(
+        schema: OffChainTokenPairOrderbookSchema
+    ): OffChainTokenPairOrderbook {
+        const res: OffChainTokenPairOrderbook  = {
+            bids: schema.bids.map(bid => Utils.OffChainSignedOrderfromJSON(bid)),
+            asks: schema.asks.map(ask => Utils.OffChainSignedOrderfromJSON(ask))
         };
-        return tokenPairOrderbookSchema;
+        return res;
     }
 
     public static OffChainSignedOrdertoJSON(signedOrder: OffChainSignedOrder): OffChainSignedOrderSchema {
@@ -133,10 +149,180 @@ export class SerializerUtils {
         const status: OffChainSignedOrderStatus = {
             orderHash: schema.orderHash,
             isValid: schema.isValid,
-            signedOrder: SerializerUtils.OffChainSignedOrderfromJSON(schema.signedOrder),
+            signedOrder: Utils.OffChainSignedOrderfromJSON(schema.signedOrder),
             remainingFillableMakerTokenAmount: new BigNumber(schema.remainingFillableMakerTokenAmount),
             remainingFillableTakerTokenAmount: new BigNumber(schema.remainingFillableTakerTokenAmount)
         };
         return status;
+    }
+
+    public static OffChainFillOrderRequestToJSON(fillOrder: OffChainFillOrderRequest): OffChainFillOrderRequestSchema {
+        const request: OffChainFillOrderRequestSchema = {
+            signedOrder: Utils.OffChainSignedOrdertoJSON(fillOrder.signedOrder),
+            takerAddress: fillOrder.takerAddress,
+            takerFillAmount: fillOrder.takerFillAmount.toFixed(),
+            ecSignature: fillOrder.ecSignature
+        }; 
+
+        return request;
+    }
+
+    public static OffChainBatchFillOrderRequestToJSON(
+        batchFillOrder: OffChainBatchFillOrderRequest
+    ): OffChainBatchFillOrderRequestSchema {
+        const orderSchemas = batchFillOrder.signedOrders.map((order: OffChainSignedOrder) => {
+            return Utils.OffChainSignedOrdertoJSON(order);
+        });
+
+        const schema: OffChainBatchFillOrderRequestSchema = {
+            signedOrders: orderSchemas,
+            takerAddress: batchFillOrder.takerAddress,
+            takerFillAmount: batchFillOrder.takerFillAmount.toFixed(),
+            ecSignature: batchFillOrder.ecSignature
+        }; 
+
+        return schema;
+    }
+
+    public static OrderFilledQuantitiesFromJSON(schema: OrderFilledQuantitiesSchema): OrderFilledQuantities {
+        const res: OrderFilledQuantities = {
+            filledMakerAmount: new BigNumber(schema.filledMakerAmount),
+            filledTakerAmount: new BigNumber(schema.filledTakerAmount)
+        };
+        return res;
+    }
+    
+    public static BigNumberToBN(value: BigNumber) {
+        const base = 10;
+        return new BN(value.toFixed(), base);
+    }
+    
+    public static GetOffChainOrderHashHex(order: OffChainOrder | OffChainSignedOrder): string {
+        const orderParts = [
+            { value: order.maker, type: SolidityTypes.Address },
+            { value: order.taker, type: SolidityTypes.Address },
+            { value: order.makerTokenAddress, type: SolidityTypes.Address },
+            { value: order.takerTokenAddress, type: SolidityTypes.Address },
+            {
+                value: this.BigNumberToBN(order.makerTokenAmount),
+                type: SolidityTypes.Uint256,
+            },
+            {
+                value: this.BigNumberToBN(order.takerTokenAmount),
+                type: SolidityTypes.Uint256,
+            },
+            {
+                value: this.BigNumberToBN(order.expirationUnixTimestampSec),
+                type: SolidityTypes.Uint256,
+            },
+            { value: this.BigNumberToBN(order.salt), type: SolidityTypes.Uint256 }
+        ];
+        const types = _.map(orderParts, o => o.type);
+        const values = _.map(orderParts, o => o.value);
+        const hashBuff = ethABI.soliditySHA3(types, values);
+        const hashHex = ethUtil.bufferToHex(hashBuff);
+        return hashHex;
+    }
+    
+    public static GetOffChainSignedOrderHashHex(order: OffChainSignedOrder): string {
+        const orderParts = [
+            { value: order.maker, type: SolidityTypes.Address },
+            { value: order.taker, type: SolidityTypes.Address },
+            { value: order.makerTokenAddress, type: SolidityTypes.Address },
+            { value: order.takerTokenAddress, type: SolidityTypes.Address },
+            {
+                value: this.BigNumberToBN(order.makerTokenAmount),
+                type: SolidityTypes.Uint256,
+            },
+            {
+                value: this.BigNumberToBN(order.takerTokenAmount),
+                type: SolidityTypes.Uint256,
+            },
+            {
+                value: this.BigNumberToBN(order.expirationUnixTimestampSec),
+                type: SolidityTypes.Uint256,
+            },
+            { 
+                value: this.BigNumberToBN(order.salt), 
+                type: SolidityTypes.Uint256 
+            },
+            { 
+                value: order.ecSignature.v, 
+                type: SolidityTypes.Uint8 
+            },
+            { 
+                value: order.ecSignature.r, 
+                type: 'bytes32'
+            },
+            { 
+                value: order.ecSignature.s, 
+                type: 'bytes32'
+            }
+        ];
+        const types = _.map(orderParts, o => o.type);
+        const values = _.map(orderParts, o => o.value);
+        const hashBuff = ethABI.soliditySHA3(types, values);
+        const hashHex = ethUtil.bufferToHex(hashBuff);
+        return hashHex;
+    }  
+    
+    public static GetOffChainBatchFillOrderHashHex(batchFillOrderReq: OffChainBatchFillOrder): string {
+        // tslint:disable-next-line:no-any
+        let orderParts: Array<{value: any, type: string}> = [];
+
+        batchFillOrderReq.signedOrders.map((order: OffChainSignedOrder) => {
+            const parts = [
+                { value: order.maker, type: SolidityTypes.Address },
+                { value: order.taker, type: SolidityTypes.Address },
+                { value: order.makerTokenAddress, type: SolidityTypes.Address },
+                { value: order.takerTokenAddress, type: SolidityTypes.Address },
+                {
+                    value: this.BigNumberToBN(order.makerTokenAmount),
+                    type: SolidityTypes.Uint256,
+                },
+                {
+                    value: this.BigNumberToBN(order.takerTokenAmount),
+                    type: SolidityTypes.Uint256,
+                },
+                {
+                    value: this.BigNumberToBN(order.expirationUnixTimestampSec),
+                    type: SolidityTypes.Uint256,
+                },
+                { 
+                    value: this.BigNumberToBN(order.salt), 
+                    type: SolidityTypes.Uint256 
+                },
+                { 
+                    value: order.ecSignature.v, 
+                    type: SolidityTypes.Uint8 
+                },
+                { 
+                    value: order.ecSignature.r, 
+                    type: 'bytes32'
+                },
+                { 
+                    value: order.ecSignature.s, 
+                    type: 'bytes32'
+                }
+            ];
+            orderParts.concat(parts);
+        });
+
+        orderParts.push({
+            value: batchFillOrderReq.takerAddress,
+            type: SolidityTypes.Address
+        });
+
+        orderParts.push({
+            value: this.BigNumberToBN(batchFillOrderReq.takerFillAmount),
+            type: SolidityTypes.Uint256
+        });
+
+        const types = _.map(orderParts, o => o.type);
+        const values = _.map(orderParts, o => o.value);
+        console.log('types:' + types.toString(), ' values: ', values.toString());
+        const hashBuff = ethABI.soliditySHA3(types, values);
+        const hashHex = ethUtil.bufferToHex(hashBuff);
+        return hashHex;
     }
 }

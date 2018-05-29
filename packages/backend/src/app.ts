@@ -68,7 +68,7 @@ export class App {
             autoAcceptConnections: false
         });
 
-        wsServer.on('request', this.zeroExApiWsHandler.webSocketConnectionHandler);
+        wsServer.on('request', this.offChainApiWsHandler.webSocketConnectionHandler);
 
         return wsServer;
     }

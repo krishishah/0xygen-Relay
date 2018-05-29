@@ -84,6 +84,16 @@ export interface TokenSchema {
     balance: string;
 }
 
+export interface OrderFilledQuantities {
+    filledMakerAmount: BigNumber;
+    filledTakerAmount: BigNumber;
+}
+
+export interface OrderFilledQuantitiesSchema {
+    filledMakerAmount: string;
+    filledTakerAmount: string;
+}
+
 export interface TokenBalancesSchema {
     userAddress: string;
     tokenBalances: TokenSchema[];
@@ -91,17 +101,43 @@ export interface TokenBalancesSchema {
 
 export type TokenBalances = Map<string, BigNumber>;
 
-export interface FillOrderRequestSchema {
+export interface OffChainFillOrderSchema {
     signedOrder: OffChainSignedOrderSchema;
     takerAddress: string;
     takerFillAmount: string;
+}
+
+export interface OffChainFillOrderRequestSchema extends OffChainFillOrderSchema {
     ecSignature: ECSignature;
 }
 
-export interface FillOrderRequest {
+export interface OffChainFillOrder {
     signedOrder: OffChainSignedOrder;
     takerAddress: string;
     takerFillAmount: BigNumber;
+}
+
+export interface OffChainFillOrderRequest extends OffChainFillOrder {
+    ecSignature: ECSignature;
+}
+
+export interface OffChainBatchFillOrder {
+    signedOrders: OffChainSignedOrder[];
+    takerAddress: string;
+    takerFillAmount: BigNumber;
+}
+
+export interface OffChainBatchFillOrderRequest extends OffChainBatchFillOrder {
+    ecSignature: ECSignature;
+}
+
+export interface OffChainBatchFillOrderSchema {
+    signedOrders: OffChainSignedOrderSchema[];
+    takerAddress: string;
+    takerFillAmount: string;
+}
+
+export interface OffChainBatchFillOrderRequestSchema extends OffChainBatchFillOrderSchema {
     ecSignature: ECSignature;
 }
 

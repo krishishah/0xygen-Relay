@@ -9,11 +9,11 @@ import {
     TokenPair 
 } from '../../../../types';
 import { Token } from '0x.js';
-import { SerializerUtils } from '../../../../utils';
+import { Utils } from '../../../../utils';
 
 interface Props {
-    onSnapshot: (snapshot: WebSocketMessage<OrderbookSnapshot>, tokenPair: TokenPair) => void;
-    onUpdate: (update: WebSocketMessage<OrderbookUpdate>, tokenPair: TokenPair) => void;
+    onSnapshot: (snapshot: OrderbookSnapshot, tokenPair: TokenPair) => void;
+    onUpdate: (update: OrderbookUpdate, tokenPair: TokenPair) => void;
 }
 
 interface State {
@@ -21,7 +21,7 @@ interface State {
     subscriptionIdMap: Map<number, TokenPair>;
 }
 
-export class RelayerWebSocketChannel extends React.Component<Props, State> {
+export class ZeroExRelayerWebSocketChannel extends React.Component<Props, State> {
     webSocket: WebSocket;
   
     constructor(props: Props) {
@@ -81,7 +81,7 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
                 const orderbookSnapshotEvent = orderbookEvent as WebSocketMessage<OrderbookSnapshot>;
                 console.log('got a snapshot orderbook event', orderbookSnapshotEvent);
                 await this.props.onSnapshot(
-                    orderbookSnapshotEvent, 
+                    orderbookSnapshotEvent.payload, 
                     this.state.subscriptionIdMap.get(orderbookSnapshotEvent.requestId) as TokenPair
                 );
                 return;
@@ -89,7 +89,7 @@ export class RelayerWebSocketChannel extends React.Component<Props, State> {
                 const orderbookUpdateEvent = orderbookEvent as WebSocketMessage<OrderbookUpdate>;
                 console.log('got a update orderbook event', orderbookUpdateEvent);
                 await this.props.onUpdate(
-                    orderbookUpdateEvent,
+                    orderbookUpdateEvent.payload,
                     this.state.subscriptionIdMap.get(orderbookUpdateEvent.requestId) as TokenPair
                 );
                 return;

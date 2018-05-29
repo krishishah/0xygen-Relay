@@ -1,16 +1,18 @@
 import { Service } from 'typedi';
 import { PAYMENT_NETWORK_HTTP_HOST } from '..';
 import axios, { AxiosRequestConfig, AxiosPromise, AxiosResponse, AxiosError } from 'axios';
-import { OffChainSignedOrderStatus, OffChainSignedOrderStatusSchema } from '../types/schemas';
+import { OffChainSignedOrderStatus, OffChainSignedOrderStatusSchema, OffChainSignedOrder } from '../types/schemas';
 import { SerializerUtils } from '../utils/serialization';
 
-const PAYMENT_NETWORK_GET_ORDER_STATUS_URI = (address: string) => `/balances/${address}`;
+const PAYMENT_NETWORK_GET_ORDER_STATUS_URI = `/exchange/order/status`;
 
 @Service()
 export class OffChainPaymentNetworkHttpClient {
 
-    getOrderStatus = (orderHashHex: string): Promise<OffChainSignedOrderStatus> => {
-        return axios.get(`${PAYMENT_NETWORK_HTTP_HOST}${PAYMENT_NETWORK_GET_ORDER_STATUS_URI(orderHashHex)}`)
+    getOrderStatus = (order: OffChainSignedOrder): Promise<OffChainSignedOrderStatus> => {
+        const orderSchema = SerializerUtils.OffChainSignedOrdertoJSON(order);
+
+        return axios.post(`${PAYMENT_NETWORK_HTTP_HOST}${PAYMENT_NETWORK_GET_ORDER_STATUS_URI}`, orderSchema)
             .then((response: AxiosResponse<OffChainSignedOrderStatusSchema>) => {
                 return SerializerUtils.OrderStatusFromJSON(response.data);
             }

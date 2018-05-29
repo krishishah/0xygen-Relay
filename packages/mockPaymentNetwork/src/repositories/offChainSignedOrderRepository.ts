@@ -1,5 +1,5 @@
 import { Repository, EntityRepository, Connection } from 'typeorm';
-import { OffChainSignedOrderEntity } from '../entities/offChainSignedOrderEntity';
+import { PaymentChannelSignedOrderEntity } from '../entities/paymentChannelSignedOrderEntity';
 import { SignedOrder } from '0x.js';
 import { BigNumber } from 'bignumber.js';
 import { ECSignature } from '@0xproject/types';
@@ -9,8 +9,8 @@ import { EventPubSub } from '../services/eventPubSub';
 import { EnrichedSignedOrder, OffChainSignedOrder } from '../types/schemas';
 
 @Service()
-@EntityRepository(OffChainSignedOrderEntity)
-export class OffChainSignedOrderRepository extends Repository<OffChainSignedOrderEntity> {
+@EntityRepository(PaymentChannelSignedOrderEntity)
+export class OffChainSignedOrderRepository extends Repository<PaymentChannelSignedOrderEntity> {
 
     public async addOrUpdateOrder(
         enrichedSignedOrder: EnrichedSignedOrder, 
@@ -68,9 +68,9 @@ export class OffChainSignedOrderRepository extends Repository<OffChainSignedOrde
     private toSignedOrderEntity(
         enrichedSignedOrder: EnrichedSignedOrder, 
         orderHashHex: string
-    ): OffChainSignedOrderEntity {
+    ): PaymentChannelSignedOrderEntity {
         try {
-            const signedOrderEntity: OffChainSignedOrderEntity = {
+            const signedOrderEntity: PaymentChannelSignedOrderEntity = {
                 ECSignatureV: enrichedSignedOrder.signedOrder.ecSignature.v.toString(),
                 ECSignatureR: enrichedSignedOrder.signedOrder.ecSignature.r,
                 ECSignatureS: enrichedSignedOrder.signedOrder.ecSignature.s,
@@ -93,7 +93,7 @@ export class OffChainSignedOrderRepository extends Repository<OffChainSignedOrde
 
     }
 
-    private toEnrichedSignedOrder(signedOrderEntity: OffChainSignedOrderEntity): EnrichedSignedOrder {       
+    private toEnrichedSignedOrder(signedOrderEntity: PaymentChannelSignedOrderEntity): EnrichedSignedOrder {       
         try {
             const ecSignature: ECSignature = {
                 r: signedOrderEntity.ECSignatureR,
@@ -126,7 +126,7 @@ export class OffChainSignedOrderRepository extends Repository<OffChainSignedOrde
         }
     }
 
-    private toSignedOrder(signedOrderEntity: OffChainSignedOrderEntity): OffChainSignedOrder {       
+    private toSignedOrder(signedOrderEntity: PaymentChannelSignedOrderEntity): OffChainSignedOrder {       
         try {
             const ecSignature: ECSignature = {
                 r: signedOrderEntity.ECSignatureR,

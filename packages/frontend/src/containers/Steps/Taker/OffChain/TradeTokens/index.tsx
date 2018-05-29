@@ -1,25 +1,32 @@
 import * as React from 'react';
 import { promisify } from '@0xproject/utils';
-import Faucet from '../../../../components/Faucet';
+import Faucet from '../../../../../components/Faucet';
 import { Token, OrderState, BlockParamLiteral, SignedOrder, ZeroEx } from '0x.js';
 import { Dictionary } from 'lodash';
-import { TokenAllowance } from '../../../App';
+import { TokenAllowance } from '../../../../App';
 import * as _ from 'lodash';
-import { RelayerWebSocketChannel } from '../../../../api/orderbook/zeroEx/webSocket';
+import { OffChainRelayerWebSocketChannel } from '../../../../../api/orderbook/offChain/webSocket';
 import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
-import { SerializerUtils } from '../../../../utils';
+import { Utils } from '../../../../../utils';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
-import { UserActionMessageStatus } from '../../../../components/UserActionMessage';
+import { UserActionMessageStatus } from '../../../../../components/UserActionMessage';
 import { 
     TokenPair, 
     WebSocketMessage, 
     OrderbookSnapshot, 
     OrderbookUpdate, 
-    TokenPairOrderbook, 
-    EnrichedSignedOrder,
-    EnrichedTokenPairOrderbook
-} from '../../../../types';
+    OffChainEnrichedTokenPairOrderbook,
+    PaymentNetworkUpdate,
+    OffChainEnrichedSignedOrder,
+    OffChainTokenPairOrderbook,
+    OffChainSignedOrder,
+    OffChainBatchFillOrder,
+    OffChainBatchFillOrderRequest,
+    OrderFilledQuantities,
+    OffChainOrderbookSnapshot,
+    OffChainOrderbookUpdate
+} from '../../../../../types';
 import { 
     DropdownProps, 
     Dropdown, 
@@ -39,6 +46,8 @@ import {
     ButtonProps
 } from 'semantic-ui-react';
 import { OrderStateWatcher } from '0x.js/lib/src/order_watcher/order_state_watcher';
+import { PaymentNetworkWebSocketClient } from '../../../../../api/paymentNetwork/webSocket';
+import { PaymentNetworkRestfulClient } from '../../../../../api/paymentNetwork/rest';
 
 export type TradeAction = 'Buy' | 'Sell';
 
@@ -55,25 +64,22 @@ interface State {
     tokenQuantity: BigNumber;
     baseToken: Token | undefined;
     quoteToken: Token | undefined;
-    enrichedOrderbook: EnrichedTokenPairOrderbook | undefined;
+    enrichedOrderbook: OffChainEnrichedTokenPairOrderbook | undefined;
     lowerBoundExchangeRate: BigNumber;
     upperBoundExchangeRate: BigNumber;
 }
 
-export default class TradeTokens extends React.Component<Props, State> {
+export default class OffChainTradeTokens extends React.Component<Props, State> {
 
-    relayerWsChannel: RelayerWebSocketChannel | null;
-    orderStateWatcher: OrderStateWatcher;
+    relayerWsChannel: OffChainRelayerWebSocketChannel | null;
+    paymentNetworkWsClient: PaymentNetworkWebSocketClient | null;
+    paymentNetworkRestClient: PaymentNetworkRestfulClient | null;
 
     // Sets maintain insertion order
-    ordersToFill: Map<string, SignedOrder>;
+    ordersToFill: Map<string, OffChainSignedOrder>;
     
     constructor(props: Props) {
         super(props);
-
-        this.orderStateWatcher = this.props.zeroEx.createOrderStateWatcher({
-            stateLayer: BlockParamLiteral.Latest
-        });
 
         this.state = {
             tradeAction: 'Buy',
@@ -90,10 +96,9 @@ export default class TradeTokens extends React.Component<Props, State> {
         if (this.relayerWsChannel) {
             this.relayerWsChannel.closeConnection();
         }
-        try {
-            this.orderStateWatcher.unsubscribe();
-        } catch (e) {
-            console.log('TradeTokens componentWillUnmount error: ', e.message);
+
+        if (this.paymentNetworkWsClient) {
+            this.paymentNetworkWsClient.closeConnection();
         }
     }
 
@@ -161,8 +166,8 @@ export default class TradeTokens extends React.Component<Props, State> {
         }
     }
 
-    onRelayerSnapshot = async (snapshot: WebSocketMessage<OrderbookSnapshot>, tokenPair: TokenPair) => {
-        const tokenPairOrderbook = SerializerUtils.TokenPairOrderbookFromJSON(snapshot.payload);
+    onRelayerSnapshot = async (snapshot: OffChainOrderbookSnapshot, tokenPair: TokenPair) => {
+        const tokenPairOrderbook = Utils.OffChainTokenPairOrderbookFromJSON(snapshot);
         const takerAddress = this.props.accounts[0];
 
         // Log number of bids and asks currently in the orderbook
@@ -189,38 +194,41 @@ export default class TradeTokens extends React.Component<Props, State> {
         this.setState({ enrichedOrderbook }, this.calculateRateRange);
     }
 
-    sortEnrichedBids = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
+    sortEnrichedBids = (a: OffChainEnrichedSignedOrder, b: OffChainEnrichedSignedOrder) => {
         const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
         const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
         return orderRateB.comparedTo(orderRateA);
     }
 
-    sortEnrichedAsks = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
+    sortEnrichedAsks = (a: OffChainEnrichedSignedOrder, b: OffChainEnrichedSignedOrder) => {
         const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
         const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
         return orderRateA.comparedTo(orderRateB);
     }
 
-    onRelayerUpdate = async (update: WebSocketMessage<OrderbookUpdate>, tokenPair: TokenPair) => {
-        const zeroEx = this.props.zeroEx;
-        const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook) as EnrichedTokenPairOrderbook;
-        const order: SignedOrder = SerializerUtils.SignedOrderfromJSON(update.payload);
+    onRelayerUpdate = async (update: OffChainOrderbookUpdate, tokenPair: TokenPair) => {
+        const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook) as OffChainEnrichedTokenPairOrderbook;
+        const order: OffChainSignedOrder = Utils.OffChainSignedOrderfromJSON(update);
         
         // Log order hash
-        const orderHash = ZeroEx.getOrderHashHex(order);
+        const orderHash = Utils.GetOffChainOrderHashHex(order);
         console.log(`NEW ORDER: ${orderHash}`);
         console.log('ask array length', JSON.stringify(this.state.enrichedOrderbook));
 
         // Return if order already exists in orderbook
         for (let x = 0; x < enrichedOrderbook.asks.length; x++) {
-            if (ZeroEx.getOrderHashHex(enrichedOrderbook.asks[x].signedOrder) === ZeroEx.getOrderHashHex(order)) {
+            if (Utils.GetOffChainOrderHashHex(enrichedOrderbook.asks[x].signedOrder) 
+                    === Utils.GetOffChainOrderHashHex(order)
+            ) {
                 console.log('REPEAT ASK IGNORING');
                 return;
             }
         }
 
         for (let x = 0; x < enrichedOrderbook.bids.length; x++) {
-            if (ZeroEx.getOrderHashHex(enrichedOrderbook.bids[x].signedOrder) === ZeroEx.getOrderHashHex(order)) {
+            if (Utils.GetOffChainOrderHashHex(enrichedOrderbook.bids[x].signedOrder) 
+                    === Utils.GetOffChainOrderHashHex(order)
+            ) {
                 console.log('REPEAT BID IGNORING');
                 return;
             }
@@ -228,7 +236,7 @@ export default class TradeTokens extends React.Component<Props, State> {
 
         // Enrich Order
         this.validateAndEnrichSignedOrder(order)
-            .then((enrichedOrder: EnrichedSignedOrder) => {    
+            .then((enrichedOrder: OffChainEnrichedSignedOrder) => {    
                 // Ask - Taker buys base token, Maker buys quote token
                 if (order.makerTokenAddress === tokenPair.base.address) {
                     // TODO: Find more efficient method of adding new asks in sorted fashion
@@ -255,31 +263,34 @@ export default class TradeTokens extends React.Component<Props, State> {
         );
     }
 
-    async validateAndEnrichOrderbook(orderbook: TokenPairOrderbook): Promise<EnrichedTokenPairOrderbook> {
-        let enrichedBids: EnrichedSignedOrder[] = [];
-        let enrichedAsks: EnrichedSignedOrder[] = [];
+    async validateAndEnrichOrderbook(
+        orderbook: OffChainTokenPairOrderbook
+    ): Promise<OffChainEnrichedTokenPairOrderbook> {
+
+        let enrichedBids: OffChainEnrichedSignedOrder[] = [];
+        let enrichedAsks: OffChainEnrichedSignedOrder[] = [];
 
         for (let x = 0; x < orderbook.asks.length; x++) {
-            let order: SignedOrder = orderbook.asks[x];
+            let order: OffChainSignedOrder = orderbook.asks[x];
             try {
-                let enrichedOrder: EnrichedSignedOrder = await this.validateAndEnrichSignedOrder(order);
+                let enrichedOrder: OffChainEnrichedSignedOrder = await this.validateAndEnrichSignedOrder(order);
                 enrichedAsks.push(enrichedOrder);
-            } catch(e) {
+            } catch (e) {
                 console.log(`Invalid Order Error ${e.message}`);
             }
         }
 
         for (let x = 0; x < orderbook.bids.length; x++) {
-            let order: SignedOrder = orderbook.bids[x];
+            let order: OffChainSignedOrder = orderbook.bids[x];
             try {
-                let enrichedOrder: EnrichedSignedOrder = await this.validateAndEnrichSignedOrder(order);
+                let enrichedOrder: OffChainEnrichedSignedOrder = await this.validateAndEnrichSignedOrder(order);
                 enrichedBids.push(enrichedOrder);
             } catch(e) {
                 console.log(`Invalid Order Error ${e.message}`);
             }
         }
 
-        const enrichedTokenPairOrderbook: EnrichedTokenPairOrderbook = {
+        const enrichedTokenPairOrderbook: OffChainEnrichedTokenPairOrderbook = {
             bids: enrichedBids,
             asks: enrichedAsks
         };
@@ -289,12 +300,12 @@ export default class TradeTokens extends React.Component<Props, State> {
         return enrichedTokenPairOrderbook;
     }
 
-    validateAndEnrichSignedOrder(signedOrder: SignedOrder): Promise<EnrichedSignedOrder> {
+    validateAndEnrichSignedOrder(signedOrder: OffChainSignedOrder): Promise<OffChainEnrichedSignedOrder> {
         const zeroEx = this.props.zeroEx;
 
-        let orderHashHex: string = ZeroEx.getOrderHashHex(signedOrder);
+        let orderHashHex: string = Utils.GetOffChainOrderHashHex(signedOrder);
         
-        const enrichedOrder: EnrichedSignedOrder = {
+        const enrichedOrder: OffChainEnrichedSignedOrder = {
             signedOrder: signedOrder,
             remainingMakerTokenAmount: signedOrder.makerTokenAmount,
             remainingTakerTokenAmount: signedOrder.takerTokenAmount
@@ -348,11 +359,11 @@ export default class TradeTokens extends React.Component<Props, State> {
             const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook);
 
             let enrichedOrder = enrichedOrderbook.asks.find(order => {
-                return ZeroEx.getOrderHashHex(order.signedOrder) === orderHash;
+                return Utils.GetOffChainOrderHashHex(order.signedOrder) === orderHash;
             });
     
             enrichedOrder = enrichedOrder || enrichedOrderbook.bids.find(order => {
-                return ZeroEx.getOrderHashHex(order.signedOrder) === orderHash;
+                return Utils.GetOffChainOrderHashHex(order.signedOrder) === orderHash;
             });
 
             // We don't want to return undefined hence the need for this check
@@ -377,41 +388,36 @@ export default class TradeTokens extends React.Component<Props, State> {
             const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook);
 
             enrichedOrderbook.asks.filter(order => {
-                return ZeroEx.getOrderHashHex(order.signedOrder) !== orderHash;
+                return Utils.GetOffChainOrderHashHex(order.signedOrder) !== orderHash;
             });
     
             enrichedOrderbook.bids.filter(order => {
-                return ZeroEx.getOrderHashHex(order.signedOrder) !== orderHash;
+                return Utils.GetOffChainOrderHashHex(order.signedOrder) !== orderHash;
             });
 
             await this.setState({ enrichedOrderbook });
         }
     }
 
-    // TODO: Implement special logic for Order fills and cancellations - Currently maker/taker amount is set to 0
-    onOrderWatcherEvent = async (err: Error | null, orderState?: OrderState) => {
-        if (orderState && orderState.isValid) {
-            const orderRelevantState = orderState.orderRelevantState;
-            
+    onPaymentNetworkOrderUpdate = (update: PaymentNetworkUpdate, tokenPair: TokenPair) => {
+        const remMakerAmount = new BigNumber(update.remainingFillableMakerTokenAmount);
+        const remTakerAmount = new BigNumber(update.remainingFillableTakerTokenAmount);
+        const signedOrder = Utils.OffChainSignedOrderfromJSON(update.signedOrder);
+        const orderHash: string = Utils.GetOffChainOrderHashHex(signedOrder);
+        
+        if (remMakerAmount.gt(0) && remTakerAmount.gt(0)) {
             this.updateEnrichedOrderbook(
-                orderState.orderHash,
-                orderRelevantState.remainingFillableMakerTokenAmount,
-                orderRelevantState.remainingFillableTakerTokenAmount
+                orderHash,
+                remMakerAmount,
+                remTakerAmount
             )
             .then((success: boolean) => {
-                if (!success) {
-                    return this.orderStateWatcher.removeOrder(orderState.orderHash);
-                } else {
-                    return this.calculateRateRange();
+                if (success) {
+                    this.calculateRateRange();
                 }
             });
-        } else if (orderState && !orderState.isValid) {
-            // Invalid OrderState or non existent OrderState with Error
-            this.orderStateWatcher.removeOrder(orderState.orderHash);
-
-            // Remove order && recalculate rates
-            this.removeOrderFromEnrichedOrderbook(orderState.orderHash)
-                .then(this.calculateRateRange);            
+        } else {
+            this.removeOrderFromEnrichedOrderbook(orderHash);
         }
     }
 
@@ -433,7 +439,7 @@ export default class TradeTokens extends React.Component<Props, State> {
             enrichedOrderbook &&
             (enrichedOrderbook.asks.length > 0 || enrichedOrderbook.bids.length > 0)
         ) {
-            const asks: EnrichedSignedOrder[] = enrichedOrderbook.asks;
+            const asks: OffChainEnrichedSignedOrder[] = enrichedOrderbook.asks;
 
             baseToken = this.state.baseToken as Token;
             quoteToken = this.state.quoteToken as Token;
@@ -450,7 +456,7 @@ export default class TradeTokens extends React.Component<Props, State> {
             // Calculate Lower Bound
             let i;
             for (i = 0; i < asks.length; i++) {
-                const enrichedOrder: EnrichedSignedOrder = asks[i];
+                const enrichedOrder: OffChainEnrichedSignedOrder = asks[i];
                 if (lowerBoundBaseTokenQuantity.lessThan(tokenQuantity)) {
                     console.log(`lower bound signed order: ${JSON.stringify(enrichedOrder)}`);
 
@@ -474,8 +480,8 @@ export default class TradeTokens extends React.Component<Props, State> {
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     lowerBoundQuoteTokenQuantity = lowerBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
 
-                    const hashHex = ZeroEx.getOrderHashHex(enrichedOrder.signedOrder);
-                    if (!this.ordersToFill.has(ZeroEx.getOrderHashHex(enrichedOrder.signedOrder))) {
+                    const hashHex = Utils.GetOffChainOrderHashHex(enrichedOrder.signedOrder);
+                    if (!this.ordersToFill.has(Utils.GetOffChainOrderHashHex(enrichedOrder.signedOrder))) {
                         this.ordersToFill.set(hashHex, enrichedOrder.signedOrder);
                     }
                 } else {
@@ -488,7 +494,7 @@ export default class TradeTokens extends React.Component<Props, State> {
 
             // Calculate Upper Bound
             for (i; i >= 0; i--) {
-                const enrichedOrder: EnrichedSignedOrder = asks[i];
+                const enrichedOrder: OffChainEnrichedSignedOrder = asks[i];
                 if ((upperBoundBaseTokenQuantity.lessThan(tokenQuantity))) {
                     
                     const makerTokenAmount = ZeroEx.toUnitAmount(
@@ -512,8 +518,8 @@ export default class TradeTokens extends React.Component<Props, State> {
                     let quoteTokenQuantityToFill = orderRate.mul(baseTokenQuantityToFill);
                     upperBoundQuoteTokenQuantity = upperBoundQuoteTokenQuantity.add(quoteTokenQuantityToFill);
 
-                    const hashHex = ZeroEx.getOrderHashHex(enrichedOrder.signedOrder);
-                    if (!this.ordersToFill.has(ZeroEx.getOrderHashHex(enrichedOrder.signedOrder))) {
+                    const hashHex = Utils.GetOffChainOrderHashHex(enrichedOrder.signedOrder);
+                    if (!this.ordersToFill.has(Utils.GetOffChainOrderHashHex(enrichedOrder.signedOrder))) {
                         this.ordersToFill.set(hashHex, enrichedOrder.signedOrder);
                     }
                 } else {
@@ -546,27 +552,57 @@ export default class TradeTokens extends React.Component<Props, State> {
         ) {
             handleTxMsg('LOADING');
             
-            const orderArray: SignedOrder[] = Array.from(this.ordersToFill.values());
+            const orderArray: OffChainSignedOrder[] = Array.from(this.ordersToFill.values());
             
-            console.log('signed orders to fill:' + JSON.stringify(orderArray));
+            console.log('off chain signed orders to fill:' + JSON.stringify(orderArray));
             console.log('Order fill amount:' + fillQuantity);
-            
+            console.log('Taker address:' + takerAddress);
+
             try {
-                const txMsg = await this.props.zeroEx.exchange.fillOrdersUpToAsync(
-                    orderArray, 
-                    fillQuantity, 
-                    true, 
-                    takerAddress
+                const paymentNetworkBatchFillOrder: OffChainBatchFillOrder = {
+                    signedOrders: orderArray,
+                    takerAddress: takerAddress,
+                    takerFillAmount: fillQuantity
+                };
+
+                const orderHashHex = Utils.GetOffChainBatchFillOrderHashHex(paymentNetworkBatchFillOrder);
+
+                const signature = await this.props.zeroEx.signOrderHashAsync(
+                    orderHashHex,
+                    takerAddress,
+                    true
                 );
 
-                const txReceipt = await this.props.zeroEx.awaitTransactionMinedAsync(txMsg);
+                const paymentNetworkFillReq: OffChainBatchFillOrderRequest = {
+                    ecSignature: signature,
+                    ...paymentNetworkBatchFillOrder
+                };
 
-                handleTxMsg('TRADE_SUCCESS', txReceipt.transactionHash);
+                if (this.paymentNetworkRestClient) {
+                    const quantities: OrderFilledQuantities 
+                        = await this.paymentNetworkRestClient.batchFillOrders(paymentNetworkFillReq);
+
+                    const purchasedAmount = ZeroEx.toUnitAmount(
+                        quantities.filledMakerAmount,
+                        baseToken.decimals
+                    );
+
+                    const sellAmount = ZeroEx.toUnitAmount(
+                        quantities.filledTakerAmount,
+                        quoteToken.decimals
+                    );
+
+                    handleTxMsg(
+                        'SUCCESS', 
+                        `You have successfully purchased ${purchasedAmount} ${baseToken.symbol}` +  
+                        ` in exchange for ${sellAmount} ${quoteToken.symbol}`
+                    );
+                }
+
             } catch (error) {
                 handleTxMsg('FAILURE', error.message);
             }
         }
-        // data.active = false;
     }
 
     render() {
@@ -638,10 +674,17 @@ export default class TradeTokens extends React.Component<Props, State> {
 
         return (
             <Form style={{ height: '100%' }}>
-                <RelayerWebSocketChannel
+                <OffChainRelayerWebSocketChannel
                     ref={ref => (this.relayerWsChannel = ref)} 
                     onSnapshot={this.onRelayerSnapshot}
                     onUpdate={this.onRelayerUpdate}
+                />
+                <PaymentNetworkWebSocketClient
+                    ref={ref => (this.paymentNetworkWsClient = ref)} 
+                    onUpdate={this.onPaymentNetworkOrderUpdate}
+                />
+                <PaymentNetworkRestfulClient
+                    ref={ref => (this.paymentNetworkRestClient = ref)} 
                 />
                 <Form.Group inline style={{display: 'flex', justifyContent: 'center'}}>
                     <label>I would like to:</label>

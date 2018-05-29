@@ -1,6 +1,5 @@
 import * as http from 'http';
 import { Service } from 'typedi';
-import { OrderService } from '../../services/orderService';
 import { SerializerUtils } from '../../utils/serialization';
 import { EventPubSub } from '../../services/eventPubSub';
 import {
@@ -29,6 +28,7 @@ import {
 } from '../../types/schemas';
 import { Container } from 'typedi/Container';
 import { App } from '../../app';
+import { OffChainOrderService } from '../../services/offChainOrderService';
 
 interface WebSocketConnectionMetadata {
     socketConnection: WebSocketConnection;
@@ -46,7 +46,7 @@ export class OffChainWebSocketHandler {
      * Initialize the Web Socket Handler
      */
     constructor( 
-        private orderService: OrderService, 
+        private orderService: OffChainOrderService, 
         private pubSubClient: EventPubSub
     ) {
         this.connectionMetadataSet = new Set();

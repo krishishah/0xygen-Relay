@@ -45,7 +45,7 @@ export class UserActionMessage extends React.Component<UserActionMessageProps> {
                 return (
                     <Message negative attached="top" onDismiss={this.props.dismissMessage}>
                         <Message.Content>
-                            <Message.Header>Oops something went wrong</Message.Header>
+                            <Message.Header>Oops! Something went wrong.</Message.Header>
                             {message}
                         </Message.Content>
                     </Message>

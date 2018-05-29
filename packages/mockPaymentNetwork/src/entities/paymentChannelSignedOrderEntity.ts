@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity()
-export class OffChainSignedOrderEntity {
+export class PaymentChannelSignedOrderEntity {
 
     @PrimaryColumn()
     orderHashHex: string;

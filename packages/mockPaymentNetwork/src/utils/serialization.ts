@@ -8,10 +8,14 @@ import {
     TokenBalances,
     TokenSchema,
     TokenBalancesSchema,
-    FillOrderRequestSchema,
+    OffChainFillOrderRequestSchema,
     OffChainSignedOrderStatus,
     OffChainSignedOrderStatusSchema,
-    FillOrderRequest
+    OffChainFillOrderRequest,
+    OffChainBatchFillOrderRequest,
+    OffChainBatchFillOrderRequestSchema,
+    OrderFilledQuantitiesSchema,
+    OrderFilledQuantities
 } from '../types/schemas';
 import { TokenPairOrderbook } from '../types/tokenPairOrderBook';
 
@@ -90,8 +94,8 @@ export class SerializerUtils {
         return res;
     }
 
-    public static FillOrderRequestFromJSON(schema: FillOrderRequestSchema): FillOrderRequest {
-        const fillOrderRequest: FillOrderRequest = {
+    public static FillOrderRequestFromJSON(schema: OffChainFillOrderRequestSchema): OffChainFillOrderRequest {
+        const fillOrderRequest: OffChainFillOrderRequest = {
             signedOrder: SerializerUtils.SignedOrderfromJSON(schema.signedOrder),
             takerAddress: schema.takerAddress,
             takerFillAmount: new BigNumber(schema.takerFillAmount),
@@ -112,4 +116,28 @@ export class SerializerUtils {
         return schema;
     }
 
+    public static OffChainBatchFillOrderRequestFromJSON(
+        schema: OffChainBatchFillOrderRequestSchema
+    ): OffChainBatchFillOrderRequest {
+        const signedOrders: OffChainSignedOrder[] = schema.signedOrders.map((order: OffChainSignedOrderSchema) => {
+            return SerializerUtils.SignedOrderfromJSON(order);
+        });
+
+        const request: OffChainBatchFillOrderRequest = {
+            signedOrders,
+            takerAddress: schema.takerAddress,
+            takerFillAmount: new BigNumber(schema.takerFillAmount),
+            ecSignature: schema.ecSignature,
+        };
+        return request;
+    }
+
+    public static OrderFilledQuantitiesToJSON(quantities: OrderFilledQuantities): OrderFilledQuantitiesSchema {
+        const schema: OrderFilledQuantitiesSchema = {
+            filledMakerAmount: quantities.filledMakerAmount.toFixed(),
+            filledTakerAmount: quantities.filledTakerAmount.toFixed()
+        };
+
+        return schema;
+    }
 }

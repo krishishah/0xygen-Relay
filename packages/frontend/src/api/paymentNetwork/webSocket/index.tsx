@@ -7,10 +7,10 @@ import {
     PaymentNetworkSubscribe 
 } from '../../../types';
 import { Token } from '0x.js';
-import { SerializerUtils } from '../../../utils';
+import { Utils } from '../../../utils';
 
 interface Props {
-    onUpdate: (update: PaymentNetworkWebSocketMessage<PaymentNetworkUpdate>, tokenPair: TokenPair) => void;
+    onUpdate: (update: PaymentNetworkUpdate, tokenPair: TokenPair) => void;
 }
 
 interface State {
@@ -77,7 +77,7 @@ export class PaymentNetworkWebSocketClient extends React.Component<Props, State>
                 const fillEvent = paymentNetworkEvent as PaymentNetworkWebSocketMessage<PaymentNetworkUpdate>;
                 console.log('got a fill orderbook event', fillEvent);
                 await this.props.onUpdate(
-                    fillEvent, 
+                    fillEvent.payload, 
                     this.state.subscriptionIdMap.get(fillEvent.requestId) as TokenPair
                 );
                 return;
@@ -85,7 +85,7 @@ export class PaymentNetworkWebSocketClient extends React.Component<Props, State>
                 const cancelEvent = paymentNetworkEvent as PaymentNetworkWebSocketMessage<PaymentNetworkUpdate>;
                 console.log('got a cancel orderbook event', paymentNetworkEvent);
                 await this.props.onUpdate(
-                    paymentNetworkEvent,
+                    cancelEvent.payload,
                     this.state.subscriptionIdMap.get(paymentNetworkEvent.requestId) as TokenPair
                 );
                 return;

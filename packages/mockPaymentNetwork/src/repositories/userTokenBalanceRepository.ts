@@ -1,4 +1,11 @@
-import { Repository, EntityRepository, Connection, TransactionManager, EntityManager } from 'typeorm';
+import { 
+    Repository, 
+    EntityRepository, 
+    TransactionManager, 
+    EntityManager, 
+    Transaction, 
+    TransactionRepository 
+} from 'typeorm';
 import { UserTokenBalanceEntity } from '../entities/userTokenBalanceEntity';
 import { SignedOrder } from '0x.js';
 import { BigNumber } from 'bignumber.js';
@@ -44,6 +51,7 @@ export class UserTokenBalanceRepository extends Repository<UserTokenBalanceEntit
         return this.save(entities).then(x => tokenBalances);
     }
 
+    @Transaction()
     async swapTokens(
         makerAddress: string, 
         makerTokenAddr: string,
@@ -51,7 +59,7 @@ export class UserTokenBalanceRepository extends Repository<UserTokenBalanceEntit
         takerAddress: string,
         takerTokenAddr: string,
         takerTokenAmount: BigNumber,
-        @TransactionManager() manager?: EntityManager
+        @TransactionManager() entityManager?: EntityManager,
     ): Promise<void> {
         const entities: UserTokenBalanceEntity[] = [];
         
@@ -101,28 +109,27 @@ export class UserTokenBalanceRepository extends Repository<UserTokenBalanceEntit
             takerMakerTokenBalance = new BigNumber(0);
         }
 
-        manager.transaction(async (entityManager: EntityManager) => {
-            await entityManager.save({
-                address: makerAddress,
-                tokenAddress: makerTokenAddr,
-                balance: makerTokenBalance.minus(makerTokenAmount).toFixed()
-            });
+        // TODO: Make the following a transaction
+        await this.save({
+            address: makerAddress,
+            tokenAddress: makerTokenAddr,
+            balance: makerTokenBalance.minus(makerTokenAmount).toFixed()
+        });
 
-            await entityManager.save({
-                address: makerAddress,
-                tokenAddress: takerTokenAddr,
-                balance: makerTakerTokenBalance.add(takerTokenAmount).toFixed()
-            });
-            await entityManager.save({
-                address: takerAddress,
-                tokenAddress: takerTokenAddr,
-                balance: takerTokenBalance.minus(takerTokenAmount).toFixed()
-            });
-            await entityManager.save({
-                address: takerAddress,
-                tokenAddress: makerTokenAddr,
-                balance: takerMakerTokenBalance.add(makerTokenAmount).toFixed()
-            });
+        await this.save({
+            address: makerAddress,
+            tokenAddress: takerTokenAddr,
+            balance: makerTakerTokenBalance.add(takerTokenAmount).toFixed()
+        });
+        await this.save({
+            address: takerAddress,
+            tokenAddress: takerTokenAddr,
+            balance: takerTokenBalance.minus(takerTokenAmount).toFixed()
+        });
+        await this.save({
+            address: takerAddress,
+            tokenAddress: makerTokenAddr,
+            balance: takerMakerTokenBalance.add(makerTokenAmount).toFixed()
         });
         
         return;
