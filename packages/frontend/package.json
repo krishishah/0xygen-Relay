@@ -31,7 +31,7 @@
   },
   "scripts": {
     "start": "PORT=5000 react-scripts-ts start",
-    "build": "react-scripts-ts build",
+    "build": "PORT=5001 react-scripts-ts build",
     "test": "react-scripts-ts test --env=jsdom",
     "eject": "react-scripts-ts eject"
   },
