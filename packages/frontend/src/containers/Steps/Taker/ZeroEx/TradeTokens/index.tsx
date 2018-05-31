@@ -39,6 +39,11 @@ import {
     ButtonProps
 } from 'semantic-ui-react';
 import { OrderStateWatcher } from '0x.js/lib/src/order_watcher/order_state_watcher';
+import { 
+    TokenRateStatistics, 
+    TokenStatistics, 
+    TokenStatisticsPlaceholder 
+} from '../../../../../components/TokenStatistics';
 
 export type TradeAction = 'Buy' | 'Sell';
 
@@ -58,6 +63,7 @@ interface State {
     enrichedOrderbook: EnrichedTokenPairOrderbook | undefined;
     lowerBoundExchangeRate: BigNumber;
     upperBoundExchangeRate: BigNumber;
+    tokenStatisticsWarning: string[] | null;
 }
 
 export default class ZeroExTradeTokens extends React.Component<Props, State> {
@@ -83,6 +89,7 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
             enrichedOrderbook: undefined,
             lowerBoundExchangeRate: new BigNumber(0),
             upperBoundExchangeRate: new BigNumber(0),
+            tokenStatisticsWarning: null
         };
     }
 
@@ -107,11 +114,11 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
     }
 
     handleTokenQuantityChange = async (e, { value }) => {
-        const previousState = Object.assign({}, this.state.tokenQuantity);
+        const shouldResubscribeToRelayer = this.state.tokenQuantity.lessThanOrEqualTo(0);
         if (value) {
             try {
                 await this.setState( { tokenQuantity: new BigNumber(value) } );
-                if (!previousState) {
+                if (shouldResubscribeToRelayer) {
                     this.onPropertyChanged();
                 } else {
                     await this.calculateRateRange();
@@ -483,6 +490,16 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
                 }
             }
 
+            // Display token statistics warning if not enough liquidity exists
+            if (lowerBoundBaseTokenQuantity.lessThan(tokenQuantity)) {
+                const msg: string[] = [`Not enough liqiduity exists for your trade requirements.`, 
+                    `You can only ${tradeAction.toLowerCase()} a maximum of ` + 
+                    `${lowerBoundBaseTokenQuantity} ${baseToken.symbol} tokens.`];
+
+                await this.setState({ tokenStatisticsWarning: msg });
+                console.log('Statistics warning: ', msg);
+            }
+
             // Calculate conservative threadshold for upper bound estimate. Currently 2x
             i = (i * 2) >= asks.length ? asks.length - 1 : (i * 2) ;
 
@@ -525,6 +542,10 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
                 lowerBoundExchangeRate: lowerBoundQuoteTokenQuantity.div(lowerBoundBaseTokenQuantity),
                 upperBoundExchangeRate: upperBoundQuoteTokenQuantity.div(upperBoundBaseTokenQuantity)
             });
+        } else if (baseToken && quoteToken && tokenQuantity.greaterThan(0)) {
+            const msg: string[] = [`No liqiduity exists for your chosen token pair.`];
+            await this.setState({ tokenStatisticsWarning: msg });
+            console.log('Statistics warning: ', msg);
         }
     }
 
@@ -574,10 +595,8 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
         const baseToken = this.state.baseToken;
         const quoteToken = this.state.quoteToken;
         const tradeAction = this.state.tradeAction;
-        const lowerBoundExchangeRate = this.state.lowerBoundExchangeRate.toPrecision(4).toString();
-        const upperBoundExchangeRate = this.state.upperBoundExchangeRate.toPrecision(4).toString();
-        const lowerBoundTokenQuantity =  this.state.tokenQuantity.mul(lowerBoundExchangeRate).toPrecision(4).toString();
-        const upperBoundTokenQuantity =  this.state.tokenQuantity.mul(upperBoundExchangeRate).toPrecision(4).toString();
+        const lowerBoundExchangeRate = this.state.lowerBoundExchangeRate;
+        const upperBoundExchangeRate = this.state.upperBoundExchangeRate;
 
         const baseTokenDropDownItems: DropdownItemProps[] = _.chain(zeroExProxyTokens)
             .filter((token: Token) => tokensWithAllowance[token.symbol])
@@ -600,38 +619,34 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
             };
         });
 
-        let tokenStatistics;
+        let tokenStats;
 
-        if (baseToken && quoteToken && this.state.tokenQuantity) {
+        if (this.state.tokenStatisticsWarning) {
+            tokenStats = (
+                <TokenStatistics warning={this.state.tokenStatisticsWarning}/>
+            );
+        } else if (baseToken && quoteToken && this.state.tokenQuantity) {
             const b = baseToken as Token;
             const q = quoteToken as Token;
-            tokenStatistics = (
-                <Segment>
-                    <Grid rows={3} textAlign="center" style={{margin: '1em 1em 1em 1em'}}>
-                        <Grid.Row>
-                            <Statistic size="small">
-                                <Statistic.Value>{lowerBoundTokenQuantity} - {upperBoundTokenQuantity}</Statistic.Value>
-                                <Statistic.Label>{q.symbol}</Statistic.Label>
-                            </Statistic>
-                        </Grid.Row>
-                        <Grid.Row><h3>AT</h3></Grid.Row>
-                        <Grid.Row>
-                            <Statistic size="small">
-                                <Statistic.Value>{lowerBoundExchangeRate} - {upperBoundExchangeRate}</Statistic.Value>
-                                <Statistic.Label>{b.symbol}/{q.symbol}</Statistic.Label>
-                            </Statistic>
-                        </Grid.Row>
-                    </Grid>
-                </Segment>
+
+            const tokenRateStats: TokenRateStatistics = {
+                baseToken,
+                quoteToken,
+                tokenQuantity: this.state.tokenQuantity,
+                lowerBoundExchangeRate,
+                upperBoundExchangeRate
+            };
+
+            tokenStats = (
+                <TokenStatistics tokenRateStatistics={tokenRateStats}/>
             );
         } else {
-            tokenStatistics = ( 
-                <Segment textAlign="center">
-                    <Statistic size="small">
-                        <Statistic.Value>0</Statistic.Value>
-                        <Statistic.Label>{quoteToken ? quoteToken.symbol : 'WETH'}</Statistic.Label>
-                    </Statistic>
-                </Segment>
+            const placeholder: TokenStatisticsPlaceholder = {
+                quoteToken
+            };
+
+            tokenStats = ( 
+                <TokenStatistics placeholder={placeholder}/>
             );
         }
 
@@ -682,7 +697,7 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
                     placeholder="Token"
                 />
                 <Divider horizontal>You Will {tradeAction === 'Buy' ? 'Spend' : 'Purchase'}</Divider>
-                {tokenStatistics}
+                {tokenStats}
                 <div style={{margin: '1em', display: 'flex', justifyContent: 'center'}}>
                     <Form.Field 
                         required 
