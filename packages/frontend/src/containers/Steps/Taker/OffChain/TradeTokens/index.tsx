@@ -1,21 +1,16 @@
 import * as React from 'react';
-import { promisify } from '@0xproject/utils';
 import Faucet from '../../../../../components/Faucet';
-import { Token, OrderState, BlockParamLiteral, SignedOrder, ZeroEx } from '0x.js';
+import { Token, ZeroEx } from '0x.js';
 import { Dictionary } from 'lodash';
 import { TokenAllowance } from '../../../../App';
 import * as _ from 'lodash';
 import { OffChainRelayerWebSocketChannel } from '../../../../../api/orderbook/offChain/webSocket';
-import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
 import { Utils } from '../../../../../utils';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
 import { UserActionMessageStatus } from '../../../../../components/UserActionMessage';
 import { 
     TokenPair, 
-    WebSocketMessage, 
-    OrderbookSnapshot, 
-    OrderbookUpdate, 
     OffChainEnrichedTokenPairOrderbook,
     PaymentNetworkUpdate,
     OffChainEnrichedSignedOrder,
@@ -43,11 +38,16 @@ import {
     Icon, 
     Divider, 
     Label,
-    ButtonProps
+    ButtonProps,
 } from 'semantic-ui-react';
-import { OrderStateWatcher } from '0x.js/lib/src/order_watcher/order_state_watcher';
+
 import { PaymentNetworkWebSocketClient } from '../../../../../api/paymentNetwork/webSocket';
 import { PaymentNetworkRestfulClient } from '../../../../../api/paymentNetwork/rest';
+import { 
+    TokenRateStatistics, 
+    TokenStatistics, 
+    TokenStatisticsPlaceholder 
+} from '../../../../../components/TokenStatistics';
 
 export type TradeAction = 'Buy' | 'Sell';
 
@@ -67,6 +67,8 @@ interface State {
     enrichedOrderbook: OffChainEnrichedTokenPairOrderbook | undefined;
     lowerBoundExchangeRate: BigNumber;
     upperBoundExchangeRate: BigNumber;
+    tokenStatisticsIsLoading: boolean;
+    tokenStatisticsWarning: string[] | null;
 }
 
 export default class OffChainTradeTokens extends React.Component<Props, State> {
@@ -89,6 +91,8 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
             enrichedOrderbook: undefined,
             lowerBoundExchangeRate: new BigNumber(0),
             upperBoundExchangeRate: new BigNumber(0),
+            tokenStatisticsWarning: null,
+            tokenStatisticsIsLoading: false
         };
     }
 
@@ -112,11 +116,11 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
     }
 
     handleTokenQuantityChange = async (e, { value }) => {
-        const previousState = Object.assign({}, this.state.tokenQuantity);
+        const shouldResubscribeToRelayer = this.state.tokenQuantity.lessThanOrEqualTo(0);
         if (value) {
             try {
                 await this.setState( { tokenQuantity: new BigNumber(value) } );
-                if (!previousState) {
+                if (shouldResubscribeToRelayer) {
                     this.onPropertyChanged();
                 } else {
                     await this.calculateRateRange();
@@ -158,6 +162,7 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
             };
 
             if (this.relayerWsChannel) {
+                await this.setState({ tokenStatisticsIsLoading: true });
                 await this.relayerWsChannel.initialiseConnection();
                 await this.relayerWsChannel.subscribe(tokenPair);
             } 
@@ -176,11 +181,11 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
         console.log(`SNAPSHOT: ${numberOfBids} bids & ${numberOfAsks} asks`);
 
         // Filter orders which takerAddress == order.maker
-        tokenPairOrderbook.asks = tokenPairOrderbook.asks.filter((order: SignedOrder) => {
+        tokenPairOrderbook.asks = tokenPairOrderbook.asks.filter((order: OffChainSignedOrder) => {
             return order.maker !== takerAddress;
         });
 
-        tokenPairOrderbook.bids = tokenPairOrderbook.bids.filter((order: SignedOrder) => {
+        tokenPairOrderbook.bids = tokenPairOrderbook.bids.filter((order: OffChainSignedOrder) => {
             return order.maker !== takerAddress;
         });
 
@@ -192,6 +197,7 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
         enrichedOrderbook.asks = enrichedOrderbook.asks.sort(this.sortEnrichedAsks);
 
         this.setState({ enrichedOrderbook }, this.calculateRateRange);
+        await this.setState({ tokenStatisticsIsLoading: false });
     }
 
     sortEnrichedBids = (a: OffChainEnrichedSignedOrder, b: OffChainEnrichedSignedOrder) => {
@@ -489,6 +495,17 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
                 }
             }
 
+            // Display token statistics warning if not enough liquidity exists
+            if (lowerBoundBaseTokenQuantity.lessThan(tokenQuantity)) {
+                const msg: string[] = 
+                    [`Not enough liqiduity exists for your trade requirements.`, 
+                    `You can only ${tradeAction.toLowerCase()} a maximum of ` + 
+                    `${lowerBoundBaseTokenQuantity} ${baseToken.symbol} tokens.`];
+
+                await this.setState({ tokenStatisticsWarning: msg });
+                console.log('Statistics warning: ', msg);
+            }
+
             // Calculate conservative threadshold for upper bound estimate. Currently 2x
             i = (i * 2) >= asks.length ? asks.length - 1 : (i * 2) ;
 
@@ -531,6 +548,10 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
                 lowerBoundExchangeRate: lowerBoundQuoteTokenQuantity.div(lowerBoundBaseTokenQuantity),
                 upperBoundExchangeRate: upperBoundQuoteTokenQuantity.div(upperBoundBaseTokenQuantity)
             });
+        } else if (baseToken && quoteToken && tokenQuantity.greaterThan(0)) {
+            const msg: string[] = [`No liqiduity exists for your chosen token pair.`];
+            await this.setState({ tokenStatisticsWarning: msg });
+            console.log('Statistics warning: ', msg);
         }
     }
 
@@ -611,10 +632,8 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
         const baseToken = this.state.baseToken;
         const quoteToken = this.state.quoteToken;
         const tradeAction = this.state.tradeAction;
-        const lowerBoundExchangeRate = this.state.lowerBoundExchangeRate.toPrecision(4).toString();
-        const upperBoundExchangeRate = this.state.upperBoundExchangeRate.toPrecision(4).toString();
-        const lowerBoundTokenQuantity =  this.state.tokenQuantity.mul(lowerBoundExchangeRate).toPrecision(4).toString();
-        const upperBoundTokenQuantity =  this.state.tokenQuantity.mul(upperBoundExchangeRate).toPrecision(4).toString();
+        const lowerBoundExchangeRate = this.state.lowerBoundExchangeRate;
+        const upperBoundExchangeRate = this.state.upperBoundExchangeRate;
 
         const baseTokenDropDownItems: DropdownItemProps[] = _.chain(zeroExProxyTokens)
             .filter((token: Token) => tokensWithAllowance[token.symbol])
@@ -637,38 +656,34 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
             };
         });
 
-        let tokenStatistics;
+        let tokenStats;
 
-        if (baseToken && quoteToken && this.state.tokenQuantity) {
+        if (this.state.tokenStatisticsWarning) {
+            tokenStats = (
+                <TokenStatistics warning={this.state.tokenStatisticsWarning}/>
+            );
+        } else if (baseToken && quoteToken && this.state.tokenQuantity) {
             const b = baseToken as Token;
             const q = quoteToken as Token;
-            tokenStatistics = (
-                <Segment>
-                    <Grid rows={3} textAlign="center" style={{margin: '1em 1em 1em 1em'}}>
-                        <Grid.Row>
-                            <Statistic size="small">
-                                <Statistic.Value>{lowerBoundTokenQuantity} - {upperBoundTokenQuantity}</Statistic.Value>
-                                <Statistic.Label>{q.symbol}</Statistic.Label>
-                            </Statistic>
-                        </Grid.Row>
-                        <Grid.Row><h3>AT</h3></Grid.Row>
-                        <Grid.Row>
-                            <Statistic size="small">
-                                <Statistic.Value>{lowerBoundExchangeRate} - {upperBoundExchangeRate}</Statistic.Value>
-                                <Statistic.Label>{b.symbol}/{q.symbol}</Statistic.Label>
-                            </Statistic>
-                        </Grid.Row>
-                    </Grid>
-                </Segment>
+
+            const tokenRateStats: TokenRateStatistics = {
+                baseToken,
+                quoteToken,
+                tokenQuantity: this.state.tokenQuantity,
+                lowerBoundExchangeRate,
+                upperBoundExchangeRate
+            };
+
+            tokenStats = (
+                <TokenStatistics tokenRateStatistics={tokenRateStats}/>
             );
         } else {
-            tokenStatistics = ( 
-                <Segment textAlign="center">
-                    <Statistic size="small">
-                        <Statistic.Value>0</Statistic.Value>
-                        <Statistic.Label>{quoteToken ? quoteToken.symbol : 'WETH'}</Statistic.Label>
-                    </Statistic>
-                </Segment>
+            const placeholder: TokenStatisticsPlaceholder = {
+                quoteToken
+            };
+
+            tokenStats = ( 
+                <TokenStatistics placeholder={placeholder}/>
             );
         }
 
@@ -726,7 +741,7 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
                     placeholder="Token"
                 />
                 <Divider horizontal>You Will {tradeAction === 'Buy' ? 'Spend' : 'Purchase'}</Divider>
-                {tokenStatistics}
+                {tokenStats}
                 <div style={{margin: '1em', display: 'flex', justifyContent: 'center'}}>
                     <Form.Field 
                         required 

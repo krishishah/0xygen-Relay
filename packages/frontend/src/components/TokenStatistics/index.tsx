@@ -24,6 +24,7 @@ export interface TokenStatisticsPlaceholder {
 interface Props {
     tokenRateStatistics?: TokenRateStatistics;
     placeholder?: TokenStatisticsPlaceholder;
+    isLoading?: boolean;
     warning?: string[];
 }
 
@@ -37,15 +38,24 @@ export class TokenStatistics extends React.Component<Props> {
 
         let tokenStatistics;
 
-        if (this.props.warning) {
+        if (this.props.isLoading) {
             tokenStatistics = (
-            <Message 
-                large 
-                visible 
-                warning 
-                header="Sorry, We can't fill your order."
-                list={this.props.warning}
-            />
+                <Message icon visible>
+                    <Icon name='circle notched' loading />
+                    <Message.Content>
+                    <Message.Header>Just a second!</Message.Header>
+                        We are fetching some rates for you.
+                    </Message.Content>
+                </Message>
+            );
+        } else if (this.props.warning) {
+            tokenStatistics = (
+                <Message 
+                    visible 
+                    warning 
+                    header="Sorry, We can't fill your order."
+                    list={this.props.warning}
+                />
             );
         } else if (this.props.tokenRateStatistics) {
             const baseToken = this.props.tokenRateStatistics.baseToken;

@@ -1,19 +1,16 @@
 import * as React from 'react';
-import { promisify } from '@0xproject/utils';
 import Faucet from '../../../../../components/Faucet';
 import { Token, OrderState, BlockParamLiteral, SignedOrder, ZeroEx } from '0x.js';
 import { Dictionary } from 'lodash';
 import { TokenAllowance } from '../../../../App';
 import * as _ from 'lodash';
 import { ZeroExRelayerWebSocketChannel } from '../../../../../api/orderbook/zeroEx/webSocket';
-import Segment from 'semantic-ui-react/dist/commonjs/elements/Segment/Segment';
 import { Utils } from '../../../../../utils';
 import { BigNumber } from 'bignumber.js';
 import * as Web3 from 'web3';
 import { UserActionMessageStatus } from '../../../../../components/UserActionMessage';
 import { 
     TokenPair, 
-    WebSocketMessage, 
     OrderbookSnapshot, 
     OrderbookUpdate, 
     TokenPairOrderbook, 
@@ -63,6 +60,7 @@ interface State {
     enrichedOrderbook: EnrichedTokenPairOrderbook | undefined;
     lowerBoundExchangeRate: BigNumber;
     upperBoundExchangeRate: BigNumber;
+    tokenStatisticsIsLoading: boolean;
     tokenStatisticsWarning: string[] | null;
 }
 
@@ -89,7 +87,8 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
             enrichedOrderbook: undefined,
             lowerBoundExchangeRate: new BigNumber(0),
             upperBoundExchangeRate: new BigNumber(0),
-            tokenStatisticsWarning: null
+            tokenStatisticsWarning: null,
+            tokenStatisticsIsLoading: false
         };
     }
 
@@ -114,12 +113,12 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
     }
 
     handleTokenQuantityChange = async (e, { value }) => {
-        const shouldResubscribeToRelayer = this.state.tokenQuantity.lessThanOrEqualTo(0);
+        const shouldResubscribeToRelayer = this.state.tokenQuantity.equals(0);
         if (value) {
             try {
                 await this.setState( { tokenQuantity: new BigNumber(value) } );
                 if (shouldResubscribeToRelayer) {
-                    this.onPropertyChanged();
+                    await this.onPropertyChanged();
                 } else {
                     await this.calculateRateRange();
                 }
@@ -132,13 +131,13 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
     handleBaseTokenDropDownItemSelected = async (e, data: DropdownProps) => {
         const itemProp = _.find(data.options, {value: data.value}) as DropdownItemProps;
         await this.setState({ baseToken: itemProp.token });
-        this.onPropertyChanged();
+        await this.onPropertyChanged();
     }
 
     handleQuoteTokenDropDownItemSelected = async (e, data: DropdownProps) => {
         const itemProp = _.find(data.options, {value: data.value}) as DropdownItemProps;
         await this.setState({ quoteToken: itemProp.token });
-        this.onPropertyChanged();
+        await this.onPropertyChanged();
     }
 
     onPropertyChanged = async () => {
@@ -160,12 +159,15 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
             };
 
             if (this.relayerWsChannel) {
+                await this.setState({ tokenStatisticsIsLoading: true });
                 await this.relayerWsChannel.initialiseConnection();
                 await this.relayerWsChannel.subscribe(tokenPair);
             } 
+
         } else {
             this.ordersToFill = new Map();
         }
+
     }
 
     onRelayerSnapshot = async (snapshot: OrderbookSnapshot, tokenPair: TokenPair) => {
@@ -194,6 +196,8 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
         enrichedOrderbook.asks = enrichedOrderbook.asks.sort(this.sortEnrichedAsks);
 
         this.setState({ enrichedOrderbook }, this.calculateRateRange);
+        await this.setState({ tokenStatisticsIsLoading: false });
+
     }
 
     sortEnrichedBids = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
@@ -438,8 +442,12 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
             tokenQuantity.greaterThan(0) &&
             tradeAction === 'Buy' && 
             enrichedOrderbook &&
-            (enrichedOrderbook.asks.length > 0 || enrichedOrderbook.bids.length > 0)
+            enrichedOrderbook.asks.length > 0
         ) {
+            await this.setState({
+                tokenStatisticsWarning: null
+            });
+
             const asks: EnrichedSignedOrder[] = enrichedOrderbook.asks;
 
             baseToken = this.state.baseToken as Token;
@@ -496,8 +504,11 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
                     `You can only ${tradeAction.toLowerCase()} a maximum of ` + 
                     `${lowerBoundBaseTokenQuantity} ${baseToken.symbol} tokens.`];
 
-                await this.setState({ tokenStatisticsWarning: msg });
+                await this.setState({
+                    tokenStatisticsWarning: msg 
+                });
                 console.log('Statistics warning: ', msg);
+                return;
             }
 
             // Calculate conservative threadshold for upper bound estimate. Currently 2x
@@ -621,11 +632,15 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
 
         let tokenStats;
 
-        if (this.state.tokenStatisticsWarning) {
+        if (this.state.tokenStatisticsIsLoading) {
+            tokenStats = (
+                <TokenStatistics isLoading={this.state.tokenStatisticsIsLoading}/>
+            );
+        } else if (this.state.tokenStatisticsWarning) {
             tokenStats = (
                 <TokenStatistics warning={this.state.tokenStatisticsWarning}/>
             );
-        } else if (baseToken && quoteToken && this.state.tokenQuantity) {
+        } else if (baseToken && quoteToken && this.state.tokenQuantity.gt(0)) {
             const b = baseToken as Token;
             const q = quoteToken as Token;
 
