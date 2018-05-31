@@ -42,8 +42,9 @@ export default class Account extends React.Component<Props, {}> {
 
         const imageSrc = icon.toDataURL();
 
-        if (Object.keys(onChainBalances).length > 0 && Object.keys(offChainBalances).length > 0) {
-            
+        let onChainBalanceTable;
+        let offChainBalanceTable;
+        if (Object.keys(onChainBalances).length > 0) {
             const onChainTokenBalances = _.map(onChainBalances, (v: TokenBalance, k: string) => {
                 const pairString = `${k}: ${v.balance}`;
                 return (
@@ -55,6 +56,28 @@ export default class Account extends React.Component<Props, {}> {
                     />
                 );
             });
+
+            onChainBalanceTable = (
+                <div>
+                    <Divider horizontal>On-Chain Token Balances</Divider>
+                    <Container style={{display: 'flex', justifyContent: 'center'}}>
+                        <Table basic="very" collapsing size="large" style={{width: '100%'}}>
+                            <Table.Header>
+                                <Table.Row>
+                                    <Table.HeaderCell>Token</Table.HeaderCell>
+                                    <Table.HeaderCell>Balance</Table.HeaderCell>
+                                </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                                {onChainTokenBalances}
+                            </Table.Body>
+                        </Table>
+                    </Container>
+                </div>
+            );
+        }
+
+        if (Object.keys(offChainBalances).length > 0) {
 
             const offChainTokenBalances = _.map(offChainBalances, (v: TokenBalance, k: string) => {
                 const pairString = `${k}: ${v.balance}`;
@@ -68,6 +91,27 @@ export default class Account extends React.Component<Props, {}> {
                 );
             });
 
+            offChainBalanceTable = (
+                <div>
+                    <Divider horizontal>Off-Chain Token Balances</Divider>
+                    <Container style={{display: 'flex', justifyContent: 'center'}}>
+                        <Table basic="very" collapsing size="large" style={{width: '100%'}}>
+                            <Table.Header>
+                                <Table.Row>
+                                    <Table.HeaderCell>Token</Table.HeaderCell>
+                                    <Table.HeaderCell>Balance</Table.HeaderCell>
+                                </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                                {offChainTokenBalances}
+                            </Table.Body>
+                        </Table>
+                    </Container>
+                </div>
+            );
+        }
+
+        if (etherBalance && account.length > 0) {
             return (
                 <div>
                     <h2 style={{textAlign: 'center'}}>WALLET</h2>
@@ -90,34 +134,8 @@ export default class Account extends React.Component<Props, {}> {
                             </List.Content>
                         </List.Item>
                     </List>
-                    <Divider horizontal>On-Chain Token Balances</Divider>
-                    <Container style={{display: 'flex', justifyContent: 'center'}}>
-                        <Table basic="very" collapsing size="large" style={{width: '100%'}}>
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.HeaderCell>Token</Table.HeaderCell>
-                                    <Table.HeaderCell>Balance</Table.HeaderCell>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {onChainTokenBalances}
-                            </Table.Body>
-                        </Table>
-                    </Container>
-                    <Divider horizontal>Off-Chain Token Balances</Divider>
-                    <Container style={{display: 'flex', justifyContent: 'center'}}>
-                        <Table basic="very" collapsing size="large" style={{width: '100%'}}>
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.HeaderCell>Token</Table.HeaderCell>
-                                    <Table.HeaderCell>Balance</Table.HeaderCell>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {offChainTokenBalances}
-                            </Table.Body>
-                        </Table>
-                    </Container>
+                    {onChainBalanceTable}
+                    {offChainBalanceTable}
                 </div>
             );
         } else {
