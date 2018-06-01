@@ -4,7 +4,8 @@ import {
     PaymentNetworkWebSocketMessage, 
     PaymentNetworkUpdate, 
     TokenPair, 
-    PaymentNetworkSubscribe 
+    PaymentNetworkSubscribe, 
+    PaymentNetworkSubscriptionSuccess
 } from '../../../types';
 import { Token } from '0x.js';
 import { Utils } from '../../../utils';
@@ -65,7 +66,7 @@ export class PaymentNetworkWebSocketClient extends React.Component<Props, State>
 
     handleWebSocketMessage = async (message: MessageEvent) => {
         console.log('[client](message): %s', message.data);   
-        if (message !== undefined) {
+        if (message) {
             const parsedMessage = JSON.parse(message.data);
             await this.handleOrderbookEvent(parsedMessage);
         }
@@ -73,6 +74,11 @@ export class PaymentNetworkWebSocketClient extends React.Component<Props, State>
 
     handleOrderbookEvent = async (paymentNetworkEvent) => {
         switch (paymentNetworkEvent.type) {
+            case 'success':
+                const paymentNetworkSubscriptionSuccessEvent 
+                    = paymentNetworkEvent as PaymentNetworkWebSocketMessage<PaymentNetworkSubscriptionSuccess>;
+                console.log('got a success payment network event', paymentNetworkSubscriptionSuccessEvent);
+            return;
             case 'fill':
                 const fillEvent = paymentNetworkEvent as PaymentNetworkWebSocketMessage<PaymentNetworkUpdate>;
                 console.log('got a fill orderbook event', fillEvent);

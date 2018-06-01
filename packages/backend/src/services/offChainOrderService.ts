@@ -45,10 +45,10 @@ export class OffChainOrderService {
         @OrmRepository(OffChainSignedOrderEntity)
         private offChainSignedOrderRepository: OffChainSignedOrderRepository,
         private httpClient: OffChainPaymentNetworkHttpClient,
-        private wsClient: OffChainPaymentNetworkWsClient,
         private pubSubClient: EventPubSub,
     ) { 
         this.onPaymentNetworkUpdate.bind(this);
+        this.init();
     }
 
     /**
@@ -198,14 +198,63 @@ export class OffChainOrderService {
      * @param {PaymentNetworkUpdate} paymentNetworkUpdate 
      * @memberof OffChainOrderService
      */
-    onPaymentNetworkUpdate(
-        paymentNetworkUpdate: PaymentNetworkUpdate
-    ) {
+    onPaymentNetworkUpdate(paymentNetworkUpdate: PaymentNetworkUpdate) {
         const order = SerializerUtils.OffChainSignedOrderfromJSON(paymentNetworkUpdate.signedOrder);
         const orderHashHex = getOffChainOrderHashHex(order);
         
         if (this.getEnrichedOffChainSignedOrder(orderHashHex)) {
-            this.postOrder(order);
+            try {
+                this.getEnrichedOffChainSignedOrder(orderHashHex);
+            } catch (e) {
+                console.log(e);
+            }
+            const remTakerAmount = new BigNumber(paymentNetworkUpdate.remainingFillableTakerTokenAmount);
+            const remMakerAmount = new BigNumber(paymentNetworkUpdate.remainingFillableMakerTokenAmount);
+            if (remMakerAmount.lessThanOrEqualTo(0) || remTakerAmount.lessThanOrEqualTo(0)) {
+                this.offChainSignedOrderRepository.removeSignedOrderByHashHex(orderHashHex);
+            } else {
+                const enrichedOrder: OffChainEnrichedSignedOrder = {
+                    signedOrder: order, 
+                    remainingMakerTokenAmount: remMakerAmount,
+                    remainingTakerTokenAmount: remTakerAmount
+                };
+
+                this.offChainSignedOrderRepository.addOrUpdateOrder(
+                    enrichedOrder,
+                    orderHashHex
+                );
+            }
         }
+    }
+
+    private init() {
+        this.offChainSignedOrderRepository
+            .getAllEnrichedSignedOrders()
+            .then((orders: OffChainEnrichedSignedOrder[]) => {
+                orders.map((order: OffChainEnrichedSignedOrder) => {
+                    this.httpClient
+                        .getOrderStatus(order.signedOrder)
+                        .then((status: OffChainSignedOrderStatus) => {
+                            const hashHex = getOffChainOrderHashHex(order.signedOrder);
+                            if (!status.isValid) {
+                                this.offChainSignedOrderRepository.removeEnrichedSignedOrder(order, hashHex);
+                            } else if (
+                                !(order.remainingMakerTokenAmount.eq(status.remainingFillableMakerTokenAmount)
+                                && order.remainingTakerTokenAmount.eq(status.remainingFillableTakerTokenAmount))
+                            ) {
+                                order.remainingMakerTokenAmount = status.remainingFillableMakerTokenAmount;
+                                order.remainingTakerTokenAmount = status.remainingFillableTakerTokenAmount;
+                                this.offChainSignedOrderRepository.addOrUpdateOrder(order, hashHex);
+                            }
+                        }).catch(err => {
+                            console.log(`Order pruning error: ${err.message}`); 
+                        }
+                    );
+                });
+            })
+            .catch(err => {
+                console.log(`Order pruning error: ${err.message}`); 
+            }
+        );
     }
 }

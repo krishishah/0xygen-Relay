@@ -13,6 +13,7 @@ import { OffChainWebSocketHandler } from './routes/offChainApi/webSocket';
 import * as cors from 'cors';
 import { OffChainPaymentNetworkRestRoutes } from './routes/offChainApi/rest';
 import { WebSocketHandler } from './routes/zeroExApi/webSocket';
+import { OffChainPaymentNetworkWsClient } from './clients/offChainPaymentNetworkWsClient';
 
 // Creates and configures an ExpressJS web server.
 @Service()
@@ -30,7 +31,8 @@ export class App {
         private v0RestApiRouter: V0RestApiRouter,
         private offChainRestApiRouter: OffChainPaymentNetworkRestRoutes, 
         private zeroExApiWsHandler: WebSocketHandler,
-        private offChainApiWsHandler: OffChainWebSocketHandler
+        private offChainApiWsHandler: OffChainWebSocketHandler,
+        private wsClient: OffChainPaymentNetworkWsClient,
     ) {
         this.express = express();
         this.zeroExWsServer = this.initZeroExRelayerApiWebSocketServer();

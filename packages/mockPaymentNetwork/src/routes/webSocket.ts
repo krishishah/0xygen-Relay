@@ -135,7 +135,12 @@ export class WebSocketHandler {
         console.log(`Received OrderEvent of type: ${data.type} with data:\n${JSON.stringify(data)}`);
 
         this.connectionMetadataSet.forEach(activeConnection => {
-            if (activeConnection.subscriptions.find(sub => sub === subChannels[0] || sub === subChannels[1])) {
+            if (activeConnection.subscriptions.find(
+                    sub => sub === subChannels[0] 
+                    || sub === subChannels[1] 
+                    || sub === subChannels[2]
+                )
+            ) {
                 
                 const requestId = activeConnection.subscriptionIdMap.get(subChannels[0]) 
                                   || activeConnection.subscriptionIdMap.get(subChannels[1])

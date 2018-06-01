@@ -80,7 +80,7 @@ export class OffChainSignedOrderRepository extends Repository<OffChainSignedOrde
     }
 
     public removeEnrichedSignedOrder(
-        enrichedSignedOrder: EnrichedSignedOrder, 
+        enrichedSignedOrder: OffChainEnrichedSignedOrder, 
         orderHashHex: string
     ): Promise<OffChainSignedOrder> {
         return this.remove(

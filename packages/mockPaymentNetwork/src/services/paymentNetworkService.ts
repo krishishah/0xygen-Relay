@@ -49,7 +49,7 @@ export class PaymentNetworkService {
      */
     getUserTokenBalances(address: string): Promise<TokenBalances> {
         return this.userTokenBalanceRepository
-            .getTokenBalances(address)
+            .getTokenBalances(address.toLowerCase())
             .catch(e => { throw e; });
     }
 
@@ -62,7 +62,7 @@ export class PaymentNetworkService {
      */
     setUserTokenBalances(address: string, tokenBalances: TokenBalances): Promise<TokenBalances> {
         return this.userTokenBalanceRepository
-            .setTokenBalances(address, tokenBalances)
+            .setTokenBalances(address.toLowerCase(), tokenBalances)
             .catch(e => { throw e; });
     }
 
@@ -232,8 +232,11 @@ export class PaymentNetworkService {
         const takerAddress: string = fillOrder.takerAddress;
         const takerFillAmount: BigNumber = fillOrder.takerFillAmount;
 
-        const rate = offChainSignedOrder.makerTokenAmount.dividedBy(offChainSignedOrder.takerTokenAmount);
-        const makerFillAmount = rate.mul(offChainSignedOrder.makerTokenAmount);
+        // Needs to be rounded to int because decimals don't exist on Ethereum
+        const makerFillAmount 
+            = offChainSignedOrder.makerTokenAmount
+                                 .mul(takerFillAmount)
+                                 .dividedToIntegerBy(offChainSignedOrder.takerTokenAmount);
 
         const orderHashHex = getOffChainOrderHashHex(offChainSignedOrder);
         
@@ -248,11 +251,11 @@ export class PaymentNetworkService {
             };
         }
         
-        const makerFillableAmount: BigNumber = BigNumber.min(makerFillAmount, offChainSignedOrder.makerTokenAmount);
-        const takerFillableAmount: BigNumber = BigNumber.min(takerFillAmount, offChainSignedOrder.takerTokenAmount);
+        const makerFillableAmount: BigNumber = BigNumber.min(makerFillAmount, enrichedOrder.remainingMakerTokenAmount);
+        const takerFillableAmount: BigNumber = BigNumber.min(takerFillAmount, enrichedOrder.remainingTakerTokenAmount);
 
-        enrichedOrder.remainingMakerTokenAmount = enrichedOrder.remainingMakerTokenAmount.minus(makerFillAmount);
-        enrichedOrder.remainingTakerTokenAmount = enrichedOrder.remainingTakerTokenAmount.minus(takerFillAmount);
+        enrichedOrder.remainingMakerTokenAmount = enrichedOrder.remainingMakerTokenAmount.minus(makerFillableAmount);
+        enrichedOrder.remainingTakerTokenAmount = enrichedOrder.remainingTakerTokenAmount.minus(takerFillableAmount);
 
         await this.offChainSignedOrderRepository.addOrUpdateOrder(enrichedOrder, orderHashHex);
 

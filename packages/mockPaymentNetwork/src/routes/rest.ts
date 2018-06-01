@@ -95,6 +95,7 @@ export class RestApiRoutes {
         const { body } = req;
         const schema = body as OffChainBatchFillOrderRequestSchema;
         const batchFillOrderReq = SerializerUtils.OffChainBatchFillOrderRequestFromJSON(schema);
+        console.log('received batch fill request: ', schema);
         this.service
             .batchFillUpTo(batchFillOrderReq)
             .then((quantities: OrderFilledQuantities) => {

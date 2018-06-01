@@ -69,7 +69,7 @@ export class OffChainPaymentNetworkWsClient {
 
     handleWebSocketMessage = async (message: MessageEvent) => {
         console.log('[client](message): %s', message.data);   
-        if (message !== undefined) {
+        if (message) {
             const parsedMessage = JSON.parse(message.data);
             await this.handlePaymentNetworkEvent(parsedMessage);
         }

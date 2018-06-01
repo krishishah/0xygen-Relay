@@ -20,7 +20,8 @@ import {
     OffChainBatchFillOrderRequest,
     OrderFilledQuantities,
     OffChainOrderbookSnapshot,
-    OffChainOrderbookUpdate
+    OffChainOrderbookUpdate,
+    OffChainSignedOrderStatus
 } from '../../../../../types';
 import { 
     DropdownProps, 
@@ -161,10 +162,13 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
                 quote: baseToken
             };
 
-            if (this.relayerWsChannel) {
-                await this.setState({ tokenStatisticsIsLoading: true });
+            await this.setState({ tokenStatisticsIsLoading: true });
+
+            if (this.relayerWsChannel && this.paymentNetworkWsClient) {
                 await this.relayerWsChannel.initialiseConnection();
                 await this.relayerWsChannel.subscribe(tokenPair);
+                await this.paymentNetworkWsClient.initialiseConnection();
+                await this.paymentNetworkWsClient.subscribe(tokenPair);
             } 
         } else {
             this.ordersToFill = new Map();
@@ -319,41 +323,28 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
 
         let remainingFillableTakerAmount = new BigNumber(0);
 
-        return zeroEx
-            .exchange
-            .getCancelledTakerAmountAsync(orderHashHex)
-            .then((cancelledTakerAmount: BigNumber) => {
-                remainingFillableTakerAmount = remainingFillableTakerAmount.add(cancelledTakerAmount);
-                return zeroEx.exchange.getFilledTakerAmountAsync(orderHashHex);
-            })
-            .then((filledTakerAmount: BigNumber) => {
-                remainingFillableTakerAmount = remainingFillableTakerAmount.add(filledTakerAmount);
-                
-                if (!remainingFillableTakerAmount.lessThan(signedOrder.takerTokenAmount)) {
-                    throw (
-                        `Unfillable Order Error! Order has no fillable tokens remaining:\n
-                        ${JSON.stringify(signedOrder)}`
-                    );
+        if (this.paymentNetworkRestClient) {
+            return this
+                .paymentNetworkRestClient
+                .getOrderStatus(signedOrder)
+                .then((status: OffChainSignedOrderStatus) => {
+                    if (status.isValid) {
+                        enrichedOrder.remainingMakerTokenAmount = status.remainingFillableMakerTokenAmount;
+                        enrichedOrder.remainingTakerTokenAmount = status.remainingFillableTakerTokenAmount;
+                        return enrichedOrder;
+                    } else {
+                        throw (
+                            `Unfillable Order Error! Order has no fillable tokens remaining:\n
+                            ${JSON.stringify(signedOrder)}`
+                        );
+                    }
                 }
-
-                const rate = enrichedOrder.signedOrder.makerTokenAmount.div(
-                    enrichedOrder.signedOrder.takerTokenAmount
-                );
-                
-                enrichedOrder.remainingTakerTokenAmount = enrichedOrder.remainingTakerTokenAmount.minus(
-                    remainingFillableTakerAmount
-                );
-
-                enrichedOrder.remainingMakerTokenAmount = enrichedOrder.remainingMakerTokenAmount.minus(
-                    remainingFillableTakerAmount.mul(rate)
-                );
-
-                return enrichedOrder;
-            })
-            .catch(err => {
-                throw err;
-            }
-        );          
+            ); 
+        } else {
+            throw (
+                `Unfillable Order Error! Can't validate order as payment network rest client has not been initialised`
+            ); 
+        }          
     }
 
     updateEnrichedOrderbook = async (
@@ -456,6 +447,10 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
             let upperBoundBaseTokenQuantity: BigNumber = new BigNumber(0);
             let upperBoundQuoteTokenQuantity: BigNumber = new BigNumber(0);
 
+            await this.setState({
+                tokenStatisticsWarning: null
+            });
+
             // TODO: Save to state
             this.ordersToFill = new Map();
 
@@ -504,6 +499,7 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
 
                 await this.setState({ tokenStatisticsWarning: msg });
                 console.log('Statistics warning: ', msg);
+                return;
             }
 
             // Calculate conservative threadshold for upper bound estimate. Currently 2x
@@ -658,7 +654,11 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
 
         let tokenStats;
 
-        if (this.state.tokenStatisticsWarning) {
+        if (this.state.tokenStatisticsIsLoading) {
+            tokenStats = (
+                <TokenStatistics isLoading={this.state.tokenStatisticsIsLoading}/>
+            );
+        } else if (this.state.tokenStatisticsWarning) {
             tokenStats = (
                 <TokenStatistics warning={this.state.tokenStatisticsWarning}/>
             );
