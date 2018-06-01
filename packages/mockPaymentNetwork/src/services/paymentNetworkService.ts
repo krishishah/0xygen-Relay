@@ -150,6 +150,8 @@ export class PaymentNetworkService {
         let remainingFillableTakerAmount = request.takerFillAmount;
         let filledMakerAmount = new BigNumber(0);
 
+        // Verification - order hash -> ecdsa -> public key -> address -> address === order submitter ? 
+
         for (let i = 0; i < request.signedOrders.length; i++) {
             if (!remainingFillableTakerAmount.greaterThan(0)) {
                 break;

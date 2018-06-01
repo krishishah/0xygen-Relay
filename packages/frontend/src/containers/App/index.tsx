@@ -548,7 +548,7 @@ export default class App extends React.Component<Props, State> {
                     marginTop: '0px !important', 
                     marginLeft: 'auto', 
                     marginRight: 'auto',
-                    minWidth: '1000px'
+                    minWidth: '1000px',
                 }}
             >  
                 <UserActionMessage 
@@ -600,7 +600,15 @@ export default class App extends React.Component<Props, State> {
             }
 
             return (
-                <Container>
+                <Container 
+                    style={{ 
+                        padding: '2em 1em 2em 1em', 
+                        marginTop: '0px !important', 
+                        marginLeft: 'auto', 
+                        marginRight: 'auto',
+                        marginBottom: 'auto',
+                    }}
+                >
                     <PaymentNetworkRestfulClient
                         ref={ref => (this.paymentNetworkRestClient = ref)} 
                     />

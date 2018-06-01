@@ -432,14 +432,21 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
         if (baseToken && 
             quoteToken && 
             tokenQuantity.greaterThan(0) &&
-            tradeAction === 'Buy' && 
             enrichedOrderbook &&
-            (enrichedOrderbook.asks.length > 0 || enrichedOrderbook.bids.length > 0)
+            enrichedOrderbook.asks.length > 0
         ) {
             const asks: OffChainEnrichedSignedOrder[] = enrichedOrderbook.asks;
 
-            baseToken = this.state.baseToken as Token;
-            quoteToken = this.state.quoteToken as Token;
+            // onPropertyChanged() switches the base and quote tokens when querying
+            // the orderbook for a 'sell' trade action. This allows us to only focus on
+            // orderbook asks and never bids
+            if (tradeAction === 'Buy') {
+                baseToken = this.state.baseToken as Token;
+                quoteToken = this.state.quoteToken as Token;
+            } else {
+                baseToken = this.state.quoteToken as Token;
+                quoteToken = this.state.baseToken as Token;
+            }
 
             let lowerBoundBaseTokenQuantity: BigNumber = new BigNumber(0);
             let lowerBoundQuoteTokenQuantity: BigNumber = new BigNumber(0);
@@ -609,9 +616,11 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
                         quoteToken.decimals
                     );
 
+                    const tradeAction = this.state.tradeAction === 'Buy' ? 'purchased' : 'sold';
+
                     handleTxMsg(
                         'SUCCESS', 
-                        `You have successfully purchased ${purchasedAmount} ${baseToken.symbol}` +  
+                        `You have successfully ${tradeAction} ${purchasedAmount} ${baseToken.symbol}` +  
                         ` in exchange for ${sellAmount} ${quoteToken.symbol}`
                     );
                 }
