@@ -33,7 +33,6 @@ import { OffChainOrderService } from '../../services/offChainOrderService';
 interface WebSocketConnectionMetadata {
     socketConnection: WebSocketConnection;
     subscriptions: string[];
-    subscriptionCount: number;
     subscriptionIdMap: Map<string, number>;
 }
 
@@ -60,7 +59,6 @@ export class OffChainWebSocketHandler {
         const connectionMetadata: WebSocketConnectionMetadata = {
             socketConnection,
             subscriptions: [],
-            subscriptionCount: 0,
             subscriptionIdMap: new Map(),
         };
 
@@ -115,6 +113,11 @@ export class OffChainWebSocketHandler {
     
                 connectionMetadata.subscriptions.push(`${baseTokenAddress}-${quoteTokenAddress}`);
     
+                connectionMetadata.subscriptionIdMap.set(
+                    `${baseTokenAddress}-${quoteTokenAddress}`,
+                    parsedMessage.requestId
+                );
+
                 if (snapshotNeeded && socketConnection !== undefined) {
                     this.orderService.getOrderbook(
                         baseTokenAddress, 
