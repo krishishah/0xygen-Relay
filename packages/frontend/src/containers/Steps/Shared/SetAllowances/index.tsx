@@ -100,23 +100,19 @@ export default class SetAllowances extends React.Component<Props, State> {
         });
 
         return (
-            <div>
-                <div>
-                    <Dropdown 
-                        placeholder="Select Token"
-                        closeOnChange={true}
-                        fluid={true} 
-                        selection={true} 
-                        options={tokenDropDownItems}
-                    />
-                </div>
+            <div style={{height: '100%', width: '100%'}}>
+                <Dropdown 
+                    placeholder="Select Token"
+                    closeOnChange={true}
+                    fluid={true} 
+                    selection={true} 
+                    options={tokenDropDownItems}
+                />
                 <br/>
-                <div>
-                    <TokenList 
-                        allowances={tokensChosenOrWithAllowances}
-                        setTokenAllowance={this.props.setTokenAllowance}
-                    />
-                </div>
+                <TokenList 
+                    allowances={tokensChosenOrWithAllowances}
+                    setTokenAllowance={this.props.setTokenAllowance}
+                />
             </div>
         );
     }
