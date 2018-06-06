@@ -424,54 +424,35 @@ export default class App extends React.Component<Props, State> {
         }
 
         return (
-            <Card 
-                raised={true} 
-                centered={true} 
-                style={{ 
-                    padding: '1em 1em 1em 1em', 
-                    marginTop: '0px !important', 
-                    marginLeft: 'auto', 
-                    marginRight: 'auto',
-                    minWidth: '1000px'
-                }}
-            >  
-                <UserActionMessage 
-                    status={this.state.transactionMessage.status} 
-                    message={this.state.transactionMessage.message} 
-                    dismissMessage={this.state.transactionMessage.dismissMessage}
+            <div>
+                <SimpleMakerTradeStepsHeader 
+                    activeStep={this.state.activeMakerStep}
+                    changeStep={this.changeMakerStep}
+                    isSubmitOrderDisabled={
+                        (zeroExMakerOrder === undefined && activeSettlementWorkflow === 'On-Chain') 
+                        ||
+                        (offChainMakerOrder === undefined && activeSettlementWorkflow === 'Off-Chain')
+                    }
                 />
-                <Card.Content>
-                    <Card.Header>
-                        <SimpleMakerTradeStepsHeader 
-                            activeStep={this.state.activeMakerStep}
-                            changeStep={this.changeMakerStep}
-                            isSubmitOrderDisabled={
-                                (zeroExMakerOrder === undefined && activeSettlementWorkflow === 'On-Chain') 
-                                ||
-                                (offChainMakerOrder === undefined && activeSettlementWorkflow === 'Off-Chain')
-                            }
-                        />
-                    </Card.Header>
-                </Card.Content>
-                <Grid columns="2" style={{height: '100%'}}>
-                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
-                        <Card.Content style={{height: '100%'}}>
+                <Segment 
+                    attached={true}
+                    raised={true} 
+                    style={{ 
+                        minWidth: '100%',
+                    }}
+                >   
+                    <UserActionMessage 
+                        status={this.state.transactionMessage.status} 
+                        message={this.state.transactionMessage.message} 
+                        dismissMessage={this.state.transactionMessage.dismissMessage}
+                    />
+                    <Grid style={{height: '100%', padding: '2em 2em 2em 2em'}} >
+                        <Card.Content style={{height: '100%', width: '100%'}}>
                             {makerStepToRender}
                         </Card.Content>
-                    </GridColumn>
-                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
-                        <Card.Content>
-                            <Account 
-                                accounts={this.state.accounts}
-                                onChainTokenBalances={this.state.onChainTokenBalances}
-                                offChainTokenBalances={this.state.offChainTokenBalances}
-                                etherBalance={this.state.etherBalance}
-                                fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
-                            />
-                        </Card.Content>
-                    </GridColumn>
-                </Grid>
-            </Card>
+                    </Grid>
+                </Segment>
+            </div>
         );
     }
 
@@ -540,49 +521,30 @@ export default class App extends React.Component<Props, State> {
         }
 
         return (
-            <Card 
-                raised={true} 
-                centered={true} 
-                style={{ 
-                    padding: '1em 1em 1em 1em', 
-                    marginTop: '0px !important', 
-                    marginLeft: 'auto', 
-                    marginRight: 'auto',
-                    minWidth: '1000px',
-                }}
-            >  
-                <UserActionMessage 
-                    status={this.state.transactionMessage.status} 
-                    message={this.state.transactionMessage.message} 
-                    dismissMessage={this.state.transactionMessage.dismissMessage}
+            <div> 
+                <SimpleTakerTradeStepsHeader 
+                    activeStep={this.state.activeTakerStep}
+                    changeStep={this.changeTakerStep}
                 />
-                <Card.Content>
-                    <Card.Header>
-                        <SimpleTakerTradeStepsHeader 
-                            activeStep={this.state.activeTakerStep}
-                            changeStep={this.changeTakerStep}
-                        />
-                    </Card.Header>
-                </Card.Content>
-                <Grid columns="2" style={{height: '100%'}}>
-                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
-                        <Card.Content style={{height: '100%'}}>
+                <Segment 
+                    attached={true}
+                    raised={true} 
+                    style={{ 
+                        minWidth: '100%',
+                    }}
+                >   
+                    <UserActionMessage 
+                        status={this.state.transactionMessage.status} 
+                        message={this.state.transactionMessage.message} 
+                        dismissMessage={this.state.transactionMessage.dismissMessage}
+                    />
+                    <Grid style={{height: '100%', padding: '2em 2em 2em 2em'}} >
+                        <Card.Content style={{height: '100%', width: '100%'}}>
                             {takerStepToRender}
                         </Card.Content>
-                    </GridColumn>
-                    <GridColumn style={{ padding: '2em 2em 2em 2em'}}>
-                        <Card.Content>
-                            <Account 
-                                accounts={this.state.accounts}
-                                onChainTokenBalances={this.state.onChainTokenBalances}
-                                offChainTokenBalances={this.state.offChainTokenBalances}
-                                etherBalance={this.state.etherBalance}
-                                fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
-                            />
-                        </Card.Content>
-                    </GridColumn>
-                </Grid>
-            </Card>
+                    </Grid>
+                </Segment>
+            </div>
         );
     }
 
@@ -607,6 +569,7 @@ export default class App extends React.Component<Props, State> {
                         marginLeft: 'auto', 
                         marginRight: 'auto',
                         marginBottom: 'auto',
+                        width: '100%'
                     }}
                 >
                     <PaymentNetworkRestfulClient
@@ -623,6 +586,7 @@ export default class App extends React.Component<Props, State> {
                             marginTop: '0px !important', 
                             marginLeft: 'auto', 
                             marginRight: 'auto',
+                            marginBottom: 'auto'
                         }}
                     >
                         <Button.Group size="large">
@@ -644,7 +608,28 @@ export default class App extends React.Component<Props, State> {
                             </Button>
                         </Button.Group>
                     </Grid>
-                    {userWorkflow}
+                    <Grid 
+                        style={{ 
+                            padding: '2em 1em 2em 1em', 
+                            marginTop: '0px !important', 
+                            marginLeft: 'auto', 
+                            marginRight: 'auto',
+                            marginBottom: 'auto'
+                        }}
+                    >
+                        <Grid.Column width={8}>
+                            {userWorkflow}
+                        </Grid.Column>
+                        <Grid.Column width={8}>
+                            <Account 
+                                accounts={this.state.accounts}
+                                onChainTokenBalances={this.state.onChainTokenBalances}
+                                offChainTokenBalances={this.state.offChainTokenBalances}
+                                etherBalance={this.state.etherBalance}
+                                fetchAccountDetailsAsync={this.fetchAccountDetailsAsync}
+                            />
+                        </Grid.Column>
+                    </Grid>
                 </Container>
             );
         } else {

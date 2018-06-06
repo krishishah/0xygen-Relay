@@ -22,7 +22,7 @@ export class SimpleTakerTradeStepsHeader extends React.Component<Props> {
         const activeStep = this.props.activeStep;
 
         return (
-            <Step.Group widths={3} style={{overflow: 'visible'}}>
+            <Step.Group widths={3} style={{overflow: 'visible'}} attached="top">
                 <Step id="WrapEth" active={activeStep === 'WrapEth'} onClick={this.changeStep}>
                     <Icon name="gift" />
                     <Step.Content>

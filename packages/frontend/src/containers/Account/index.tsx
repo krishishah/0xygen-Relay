@@ -4,7 +4,18 @@ import { ZeroEx, Token } from '0x.js';
 import { Web3Wrapper } from '@0xproject/web3-wrapper';
 import * as Web3 from 'web3';
 import { BigNumber } from '@0xproject/utils';
-import { Button, Container, Table, Header, List, Image, Divider } from 'semantic-ui-react';
+import { 
+    Button, 
+    Container, 
+    Table, 
+    Header, 
+    List, 
+    Image, 
+    Divider, 
+    Card,
+    Segment, 
+    Icon 
+} from 'semantic-ui-react';
 import { BalanceTableRow } from '../Account/BalanceTableRow';
 import { TokenBalance } from '../App';
 import { Dictionary } from 'lodash';
@@ -113,8 +124,16 @@ export default class Account extends React.Component<Props, {}> {
 
         if (etherBalance && account.length > 0) {
             return (
-                <div>
-                    <h2 style={{textAlign: 'center'}}>WALLET</h2>
+                <Segment 
+                    centered={true} 
+                    style={{ 
+                        padding: '2em 2em 2em 2em', 
+                        minWidth: '100%',
+                    }}
+                >
+                        <Header as="h2" textAlign="center">
+                            Wallet
+                        </Header>
                     <List size="medium">
                         <List.Item>
                             <Image avatar src={imageSrc}/>
@@ -136,16 +155,26 @@ export default class Account extends React.Component<Props, {}> {
                     </List>
                     {onChainBalanceTable}
                     {offChainBalanceTable}
-                </div>
+                </Segment>
             );
         } else {
             return (
-                <Container textAlign="center">
+                <Card 
+                    raised={true} 
+                    centered={true} 
+                    style={{ 
+                        padding: '1em 1em 1em 1em', 
+                        marginTop: '0px !important', 
+                        marginLeft: 'auto', 
+                        marginRight: 'auto',
+                        minWidth: '100%',
+                    }}
+                > 
                     <p> Detecting Metamask... Please ensure Metamask is unlocked </p>
                     <Button id="fetchAccountBalances" onClick={this.props.fetchAccountDetailsAsync}>
                         Fetch Balances
                     </Button>
-                </Container>
+                </Card>
             );
         }
     }
