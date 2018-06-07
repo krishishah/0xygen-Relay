@@ -49,7 +49,7 @@ export default class SetAllowances extends React.Component<Props, State> {
         setInterval(() => {
             this.props.fetchAllowances();
         // tslint:disable-next-line:align
-        }, 5000);
+        }, 2000);
     }
 
     private chooseTokenFromDropDown = async (
