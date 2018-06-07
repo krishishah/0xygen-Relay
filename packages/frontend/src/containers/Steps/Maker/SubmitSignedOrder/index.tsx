@@ -95,17 +95,19 @@ export default class SubmitSignedOrder extends React.Component<Props, State> {
                         <Form.TextArea 
                             autoHeight 
                             style={{ fontFamily: 'monospace', whiteSpace: 'pre'}}
-                        >
-                            {activeWorkflow === 'On-Chain' ? JSON.stringify(this.props.zeroExSignedOrder, null, 2)
-                             : JSON.stringify(this.props.offChainSignedOrder, null, 2)
-                            }
-                        </Form.TextArea>
+                            value={
+                                activeWorkflow === 'On-Chain' ? JSON.stringify(this.props.zeroExSignedOrder, null, 2)
+                                : JSON.stringify(this.props.offChainSignedOrder, null, 2)
+                                }
+                        />
                     </Form.Field>
                     <Form.Field>
                         <label>Order Hash:</label>
-                        <Form.TextArea autoHeight style={{ fontFamily: 'monospace', monospace: 'true'}}>
-                            {orderHash}
-                        </Form.TextArea>
+                        <Form.TextArea 
+                            autoHeight 
+                            style={{ fontFamily: 'monospace', monospace: 'true'}} 
+                            value={orderHash}
+                        />
                     </Form.Field>
                     <div style={{margin: '1em', display: 'flex', justifyContent: 'center'}}>
                         <Form.Button onClick={this.onClickSubmit}>

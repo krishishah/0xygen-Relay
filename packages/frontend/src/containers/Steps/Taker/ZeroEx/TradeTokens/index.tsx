@@ -200,16 +200,18 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
 
     }
 
+    // Sort in ascending order of makerTokenAmount / takerTokenAmount
     sortEnrichedBids = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
         const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
         const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
-        return orderRateB.comparedTo(orderRateA);
+        return orderRateA.comparedTo(orderRateB);
     }
 
+    // Sort in descending order of makerTokenAmount / takerTokenAmount
     sortEnrichedAsks = (a: EnrichedSignedOrder, b: EnrichedSignedOrder) => {
         const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
         const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
-        return orderRateA.comparedTo(orderRateB);
+        return orderRateB.comparedTo(orderRateA);
     }
 
     onRelayerUpdate = async (update: OrderbookUpdate, tokenPair: TokenPair) => {

@@ -242,8 +242,6 @@ export default class App extends React.Component<Props, State> {
             console.log(e);
         }
 
-        console.log(offChainTokenBalanceDict);
-
         await this.setState({
             onChainTokenBalances: onChainTokenBalances,
             offChainTokenBalances: offChainTokenBalanceDict,
@@ -580,7 +578,7 @@ export default class App extends React.Component<Props, State> {
                         onChangeWorkflow={this.onChangeWorkflow}
                     />
                     <Grid 
-                        centered={true} 
+                        centered
                         style={{ 
                             padding: '2em 1em 2em 1em', 
                             marginTop: '0px !important', 
@@ -594,7 +592,6 @@ export default class App extends React.Component<Props, State> {
                                 basic={this.state.activeSettlementWorkflow !== 'On-Chain'} 
                                 onClick={this.onClickOnChainWorkflow}
                                 color="grey" 
-                                content="Blue"
                             >
                             On-Chain
                             </Button>
@@ -602,7 +599,6 @@ export default class App extends React.Component<Props, State> {
                                 basic={this.state.activeSettlementWorkflow !== 'Off-Chain'} 
                                 onClick={this.onClickOffChainWorkflow}
                                 color="grey" 
-                                content="Black"
                             >
                             Off-Chain
                             </Button>

@@ -125,7 +125,6 @@ export default class Account extends React.Component<Props, {}> {
         if (etherBalance && account.length > 0) {
             return (
                 <Segment 
-                    centered={true} 
                     style={{ 
                         padding: '2em 2em 2em 2em', 
                         minWidth: '100%',

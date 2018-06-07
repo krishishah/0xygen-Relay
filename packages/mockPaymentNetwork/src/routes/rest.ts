@@ -104,7 +104,7 @@ export class RestApiRoutes {
             })
             .catch(e => {
                 res.statusMessage = e.statusMessage;
-                res.status(500).send({});
+                res.status(500).send(e.statusMessage);
             }
         );
     }

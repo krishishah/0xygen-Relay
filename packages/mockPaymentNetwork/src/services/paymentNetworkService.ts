@@ -14,12 +14,18 @@ import {
     OffChainSignedOrderStatus, 
     OffChainBatchFillOrderRequest,
     OrderFilledQuantities,
-    OffChainFillOrder
+    OffChainFillOrder,
+    OffChainBatchFillOrder
 } from '../types/schemas';
 import { promisify } from 'util';
 import { PaymentChannelSignedOrderEntity } from '../entities/paymentChannelSignedOrderEntity';
 import { OffChainSignedOrderRepository } from '../repositories/offChainSignedOrderRepository';
-import { getOffChainOrderHashHex, getOffChainSignedOrderHashHex } from '../utils/offChainOrderHash';
+import { 
+    getOffChainOrderHashHex, 
+    getOffChainSignedOrderHashHex, 
+    getOffChainBatchFillOrderHashHex, 
+    addSignedMessagePrefix
+} from '../utils/offChainOrderHash';
 import { EventPubSub } from './eventPubSub';
 import { OrderEvent, OrderUpdate, ORDER_FILL_EVENT, ORDER_UPDATED } from '../types/events';
 
@@ -116,7 +122,7 @@ export class PaymentNetworkService {
 
             await this.offChainSignedOrderRepository.addOrUpdateOrder(enrichedOrder, orderHashHex);
 
-            await this.userTokenBalanceRepository.swapTokens(
+            await this.userTokenBalanceRepository.swapTokenBalances(
                 offChainSignedOrder.maker,
                 offChainSignedOrder.makerTokenAddress,
                 makerFillAmount,
@@ -150,7 +156,13 @@ export class PaymentNetworkService {
         let remainingFillableTakerAmount = request.takerFillAmount;
         let filledMakerAmount = new BigNumber(0);
 
-        // Verification - order hash -> ecdsa -> public key -> address -> address === order submitter ? 
+        // Verification - order hash, ecdsa -> public key -> address -> (address === order submitter)? 
+        let batchOrderHash = getOffChainBatchFillOrderHashHex(request as OffChainBatchFillOrder);
+
+        if (!ZeroEx.isValidSignature(batchOrderHash, request.ecSignature, request.takerAddress)) {
+            console.log('Batch Fill Order Validation Failed! Signature does not match data');
+            throw 'Batch Fill Order Validation Failed! Signature does not match data';
+        }
 
         for (let i = 0; i < request.signedOrders.length; i++) {
             if (!remainingFillableTakerAmount.greaterThan(0)) {
@@ -178,9 +190,11 @@ export class PaymentNetworkService {
             }
         }
 
+        // Maker fills takerAmount and taker fills MakerAmount
+        // TODO: Improve naming of these interface fields
         const filledQuantities: OrderFilledQuantities = {
-            filledMakerAmount: filledMakerAmount,
-            filledTakerAmount: request.takerFillAmount.minus(remainingFillableTakerAmount)
+            filledTakerAmount: filledMakerAmount,
+            filledMakerAmount: request.takerFillAmount.minus(remainingFillableTakerAmount)
         };
 
         return filledQuantities;
@@ -235,10 +249,10 @@ export class PaymentNetworkService {
         const takerFillAmount: BigNumber = fillOrder.takerFillAmount;
 
         // Needs to be rounded to int because decimals don't exist on Ethereum
+        // Maker fills taker tokens thus fill amount = takerFillAmount * takerTokenAmount / makerTokenAmount
         const makerFillAmount 
-            = offChainSignedOrder.makerTokenAmount
-                                 .mul(takerFillAmount)
-                                 .dividedToIntegerBy(offChainSignedOrder.takerTokenAmount);
+            = takerFillAmount.mul(offChainSignedOrder.takerTokenAmount)
+                             .dividedToIntegerBy(offChainSignedOrder.makerTokenAmount);
 
         const orderHashHex = getOffChainOrderHashHex(offChainSignedOrder);
         
@@ -253,21 +267,22 @@ export class PaymentNetworkService {
             };
         }
         
-        const makerFillableAmount: BigNumber = BigNumber.min(makerFillAmount, enrichedOrder.remainingMakerTokenAmount);
-        const takerFillableAmount: BigNumber = BigNumber.min(takerFillAmount, enrichedOrder.remainingTakerTokenAmount);
+        // Maker fills taker tokens and taker fills maker's tokens
+        const makerFillableAmount: BigNumber = BigNumber.min(makerFillAmount, enrichedOrder.remainingTakerTokenAmount);
+        const takerFillableAmount: BigNumber = BigNumber.min(takerFillAmount, enrichedOrder.remainingMakerTokenAmount);
 
-        enrichedOrder.remainingMakerTokenAmount = enrichedOrder.remainingMakerTokenAmount.minus(makerFillableAmount);
-        enrichedOrder.remainingTakerTokenAmount = enrichedOrder.remainingTakerTokenAmount.minus(takerFillableAmount);
+        enrichedOrder.remainingMakerTokenAmount = enrichedOrder.remainingMakerTokenAmount.minus(takerFillableAmount);
+        enrichedOrder.remainingTakerTokenAmount = enrichedOrder.remainingTakerTokenAmount.minus(makerFillableAmount);
 
         await this.offChainSignedOrderRepository.addOrUpdateOrder(enrichedOrder, orderHashHex);
 
-        await this.userTokenBalanceRepository.swapTokens(
+        await this.userTokenBalanceRepository.swapTokenBalances(
             offChainSignedOrder.maker,
             offChainSignedOrder.makerTokenAddress,
-            makerFillAmount,
+            makerFillableAmount,
             takerAddress,
             offChainSignedOrder.takerTokenAddress,
-            takerFillAmount
+            takerFillableAmount
         )
         .catch(e => { throw e; });
 
