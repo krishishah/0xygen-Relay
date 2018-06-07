@@ -133,6 +133,10 @@ export default class App extends React.Component<Props, State> {
         this.initialiseState();
     }
 
+    componentDidMount() {
+        this.fetchAllowances();
+    }
+
     initialiseState = () => {
         if (typeof (window as any).web3 !== 'undefined') {
             // Add metamask subprovider to engine if it exists
@@ -242,10 +246,13 @@ export default class App extends React.Component<Props, State> {
             console.log(e);
         }
 
+        await this.fetchAllowances();
+
         await this.setState({
             onChainTokenBalances: onChainTokenBalances,
             offChainTokenBalances: offChainTokenBalanceDict,
             accounts: addresses,
+            zeroExRegistryTokens: tokens
         });
     }
 
@@ -317,7 +324,7 @@ export default class App extends React.Component<Props, State> {
         this.setState({
             tokensWithAllowances,
             zeroExRegistryTokens: tokens
-        });
+        }); 
     }
 
     private changeTakerStep = async (newStep: SimpleTakerTradeStep) => {

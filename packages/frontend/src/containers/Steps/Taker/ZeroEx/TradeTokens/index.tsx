@@ -619,7 +619,7 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
         const lowerBoundExchangeRate = this.state.lowerBoundExchangeRate;
         const upperBoundExchangeRate = this.state.upperBoundExchangeRate;
 
-        const baseTokenDropDownItems: DropdownItemProps[] = _.chain(zeroExProxyTokens)
+        const quoteTokenDropDownItems: DropdownItemProps[] = _.chain(zeroExProxyTokens)
             .filter((token: Token) => tokensWithAllowance[token.symbol])
             .map((token: Token) => {
                 return {
@@ -631,7 +631,7 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
             })
             .value();
 
-        const quoteTokenDropDownItems: DropdownItemProps[] = _.map(zeroExProxyTokens, (token: Token) => {
+        const baseTokenDropDownItems: DropdownItemProps[] = _.map(zeroExProxyTokens, (token: Token) => {
             return {
                 key: token.symbol,
                 value: token.symbol,  
@@ -709,7 +709,7 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
                     required
                     selection 
                     label="Token" 
-                    options={baseTokenDropDownItems}
+                    options={tradeAction === 'Buy' ? baseTokenDropDownItems : quoteTokenDropDownItems}
                     onChange={this.handleBaseTokenDropDownItemSelected}
                     placeholder="Token"
                 />
@@ -717,7 +717,7 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
                     required
                     selection
                     label="In exchange for:" 
-                    options={quoteTokenDropDownItems} 
+                    options={tradeAction === 'Buy' ? quoteTokenDropDownItems : baseTokenDropDownItems} 
                     onChange={this.handleQuoteTokenDropDownItemSelected}
                     placeholder="Token"
                 />
