@@ -52,7 +52,7 @@ export class UserTokenBalanceRepository extends Repository<UserTokenBalanceEntit
     }
 
     @Transaction()
-    async swapTokens(
+    async swapTokenBalances(
         makerAddress: string, 
         makerTokenAddr: string,
         makerTokenAmount: BigNumber,
@@ -113,23 +113,23 @@ export class UserTokenBalanceRepository extends Repository<UserTokenBalanceEntit
         await this.save({
             address: makerAddress,
             tokenAddress: makerTokenAddr,
-            balance: makerTokenBalance.minus(makerTokenAmount).toFixed()
+            balance: makerTokenBalance.minus(takerTokenAmount).toFixed()
         });
 
         await this.save({
             address: makerAddress,
             tokenAddress: takerTokenAddr,
-            balance: makerTakerTokenBalance.add(takerTokenAmount).toFixed()
+            balance: makerTakerTokenBalance.add(makerTokenAmount).toFixed()
         });
         await this.save({
             address: takerAddress,
             tokenAddress: takerTokenAddr,
-            balance: takerTokenBalance.minus(takerTokenAmount).toFixed()
+            balance: takerTokenBalance.minus(makerTokenAmount).toFixed()
         });
         await this.save({
             address: takerAddress,
             tokenAddress: makerTokenAddr,
-            balance: takerMakerTokenBalance.add(makerTokenAmount).toFixed()
+            balance: takerMakerTokenBalance.add(takerTokenAmount).toFixed()
         });
         
         return;

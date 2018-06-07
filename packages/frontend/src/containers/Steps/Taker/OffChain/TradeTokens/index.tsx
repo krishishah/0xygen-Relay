@@ -204,16 +204,18 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
         await this.setState({ tokenStatisticsIsLoading: false });
     }
 
+    // Sort in ascending order of makerTokenAmount / takerTokenAmount
     sortEnrichedBids = (a: OffChainEnrichedSignedOrder, b: OffChainEnrichedSignedOrder) => {
         const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
         const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
-        return orderRateB.comparedTo(orderRateA);
+        return orderRateA.comparedTo(orderRateB);
     }
 
+    // Sort in descending order of makerTokenAmount / takerTokenAmount
     sortEnrichedAsks = (a: OffChainEnrichedSignedOrder, b: OffChainEnrichedSignedOrder) => {
         const orderRateA = a.remainingMakerTokenAmount.dividedBy(a.remainingTakerTokenAmount);
         const orderRateB = b.remainingMakerTokenAmount.dividedBy(b.remainingTakerTokenAmount);
-        return orderRateA.comparedTo(orderRateB);
+        return orderRateB.comparedTo(orderRateA);
     }
 
     onRelayerUpdate = async (update: OffChainOrderbookUpdate, tokenPair: TokenPair) => {
@@ -412,9 +414,17 @@ export default class OffChainTradeTokens extends React.Component<Props, State> {
                 if (success) {
                     this.calculateRateRange();
                 }
+            })
+            .then(x => {
+                return;
             });
         } else {
-            this.removeOrderFromEnrichedOrderbook(orderHash);
+            this.removeOrderFromEnrichedOrderbook(orderHash)
+            .then(x => {
+                this.calculateRateRange();
+            }).then(x => {
+                return;
+            });
         }
     }
 
