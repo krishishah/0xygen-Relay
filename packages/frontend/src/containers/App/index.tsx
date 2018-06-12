@@ -1,4 +1,5 @@
 import * as React from 'react';
+import './App.css';
 import Welcome from '../../components/Welcome';
 import Account from '../Account';
 import Web3Actions from '../../components/Web3Actions';
@@ -35,7 +36,10 @@ import {
     GridColumn,
     MenuItemProps,
     Button,
-    ButtonProps
+    ButtonProps,
+    Modal,
+    Header,
+    Image
 } from 'semantic-ui-react';
 import { 
     InjectedWeb3Subprovider, 
@@ -95,7 +99,7 @@ interface State {
     submitableZeroExMakerSignedOrder: undefined | SignedOrder;
     submitableOffChainMakerSignedOrder: undefined | OffChainSignedOrder;
     activeSettlementWorkflow: UserSettlementWorkflow;
-    
+    displayWorkflowInformationModal: boolean;
 }
 
 export default class App extends React.Component<Props, State> {
@@ -125,7 +129,8 @@ export default class App extends React.Component<Props, State> {
             activeUserWorkflow: 'Taker',
             submitableZeroExMakerSignedOrder: undefined,
             submitableOffChainMakerSignedOrder: undefined,
-            activeSettlementWorkflow: 'On-Chain'
+            activeSettlementWorkflow: 'On-Chain',
+            displayWorkflowInformationModal: true
         };
     }
 
@@ -374,6 +379,14 @@ export default class App extends React.Component<Props, State> {
         await this.setState({ activeSettlementWorkflow: 'Off-Chain' });
     }
 
+    private onClickWorkflowInformation = async (event: React.MouseEvent<HTMLAnchorElement>, data: MenuItemProps) => {
+        await this.setState({ displayWorkflowInformationModal: true });
+    }
+
+    private closeWorkflowInformationModal = async () => {
+        await this.setState({ displayWorkflowInformationModal: false });
+    }
+
     private renderMakerWorkflow = (): any => {
         let makerStepToRender;
         let activeMakerStep = this.state.activeMakerStep;
@@ -553,6 +566,30 @@ export default class App extends React.Component<Props, State> {
         );
     }
 
+    private renderWorkflowChoiceModal = (): any => {
+        return (
+            <Modal
+              open={this.state.displayWorkflowInformationModal}
+              closeIcon={true}
+              onClose={this.closeWorkflowInformationModal}
+              size="large"
+              centered={true}
+              dimmer="blurring"
+            >
+                <Header icon="edit" content="Choose Your Trading Workflow" />
+                <Modal.Content>
+                    <Image wrapped size="medium" src="/images/makerTaker0xygenDiagram.png" />
+                    <h3>This website uses cookies to ensure the best user experience.</h3>
+                </Modal.Content>
+                <Modal.Actions>
+                    <Button color="green" onClick={this.closeWorkflowInformationModal} inverted>
+                    <Icon name="checkmark" /> Got it
+                    </Button>
+                </Modal.Actions>
+            </Modal>
+        );
+    }
+
     // tslint:disable-next-line:member-ordering
     render() {
         // Detect if Web3 is found, if not, ask the user to install Metamask
@@ -566,6 +603,8 @@ export default class App extends React.Component<Props, State> {
                 userWorkflow = this.renderMakerWorkflow();
             }
 
+            const workflowChoiceModal = this.renderWorkflowChoiceModal();
+
             return (
                 <Container 
                     style={{ 
@@ -576,14 +615,16 @@ export default class App extends React.Component<Props, State> {
                         marginBottom: 'auto',
                         width: '100%'
                     }}
-                >
+                >   
                     <PaymentNetworkRestfulClient
                         ref={ref => (this.paymentNetworkRestClient = ref)} 
                     />
                     <Dashboard
                         activeWorkflow={this.state.activeUserWorkflow}
                         onChangeWorkflow={this.onChangeWorkflow}
+                        onClickInformation={this.onClickWorkflowInformation}
                     />
+                    {workflowChoiceModal}
                     <Grid 
                         centered
                         style={{ 

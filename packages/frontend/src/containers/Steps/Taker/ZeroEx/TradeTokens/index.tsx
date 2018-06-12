@@ -387,13 +387,13 @@ export default class ZeroExTradeTokens extends React.Component<Props, State> {
         orderHash: string, 
     ): Promise<void> => {
         if (this.state.enrichedOrderbook) {
-            const enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook);
+            let enrichedOrderbook = Object.assign({}, this.state.enrichedOrderbook);
 
-            enrichedOrderbook.asks.filter(order => {
+            enrichedOrderbook.asks = enrichedOrderbook.asks.filter(order => {
                 return ZeroEx.getOrderHashHex(order.signedOrder) !== orderHash;
             });
     
-            enrichedOrderbook.bids.filter(order => {
+            enrichedOrderbook.bids = enrichedOrderbook.bids.filter(order => {
                 return ZeroEx.getOrderHashHex(order.signedOrder) !== orderHash;
             });
 

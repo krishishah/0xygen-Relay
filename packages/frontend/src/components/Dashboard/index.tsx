@@ -5,6 +5,7 @@ export type UserWorflow = 'Maker' | 'Taker';
 
 export interface DashboardProps {
     activeWorkflow: UserWorflow;
+    onClickInformation: (event: React.MouseEvent<HTMLAnchorElement>, data: MenuItemProps) => void;
     onChangeWorkflow: (event: React.MouseEvent<HTMLAnchorElement>, data: MenuItemProps) => void;
 }
 
@@ -32,6 +33,10 @@ export class Dashboard extends React.Component<DashboardProps> {
                     name="Order Maker" 
                     active={activeWorkflow === 'Maker'} 
                     onClick={this.props.onChangeWorkflow} 
+                />
+                <Menu.Item
+                    icon="info circle"
+                    onClick={this.props.onClickInformation} 
                 />
             </Menu.Menu>
             </Menu>
