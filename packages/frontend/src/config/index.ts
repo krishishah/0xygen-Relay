@@ -12,8 +12,8 @@ export const ETHER_DECIMAL_PLACES = 18;
 
 export const RELAYER_HOST = process.env.RELAYER_HOST || 'http://localhost:3000';
 
-export const RELAYER_ZERO_EX_WS_URL = process.env.RELAYER_ZERO_EX_WS_URL || 'ws://localhost:3001';
-export const RELAYER_OFF_CHAIN_WS_URL = process.env.RELAYER_OFF_CHAIN_WS_URL || 'ws://localhost:3002';
+export const RELAYER_ZERO_EX_WS_URL = process.env.REACT_APP_RELAYER_ZERO_EX_WS_URL || 'ws://localhost:3001';
+export const RELAYER_OFF_CHAIN_WS_URL = process.env.REACT_APP_RELAYER_OFF_CHAIN_WS_URL || 'ws://localhost:3002';
 
-export const PAYMENT_NETWORK_HTTP_URL = process.env.PAYMENT_NETWORK_HTTP_URL || 'http://localhost:3003';
-export const PAYMENT_NETWORK_WS_URL = process.env.PAYMENT_NETWORK_WS_URL || 'ws://localhost:3004';
+export const PAYMENT_NETWORK_HTTP_URL = process.env.REACT_APP_PAYMENT_NETWORK_HTTP_URL || 'http://localhost:3003';
+export const PAYMENT_NETWORK_WS_URL = process.env.REACT_APP_PAYMENT_NETWORK_WS_URL || 'ws://localhost:3004';
