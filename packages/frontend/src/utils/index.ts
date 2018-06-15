@@ -191,6 +191,24 @@ export class Utils {
         };
         return res;
     }
+
+    public static SetOffChainBalanceToJSON(
+        userAddress: string, 
+        tokenAddress: string, 
+        quantity: BigNumber
+    ): OffChainTokenBalancesSchema {
+        const schema: OffChainTokenBalancesSchema = {
+            userAddress,
+            tokenBalances: [
+                {
+                    address: tokenAddress,
+                    balance: quantity.toFixed()
+                }
+            ]
+        };
+
+        return schema;
+    }
     
     public static BigNumberToBN(value: BigNumber) {
         const base = 10;

@@ -73,6 +73,15 @@ export class PaymentNetworkService {
     }
 
     /**
+     * For testing purposes only. Retrieve all orders from repository.
+     * @returns {Promise<OffChainSignedOrder[]>} 
+     * @memberof PaymentNetworkService
+     */
+    getAllOrders(): Promise<OffChainSignedOrder[]> {
+        return this.offChainSignedOrderRepository.getAllOrders();
+    }
+
+    /**
      * Get enriched signed order from repository or throw if no entities found.
      * @param {string} orderHashHex 
      * @returns {Promise<EnrichedSignedOrder>} 

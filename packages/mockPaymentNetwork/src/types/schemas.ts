@@ -30,12 +30,6 @@ export interface OffChainSignedOrderSchema {
     expirationUnixTimestampSec: string;
 }
 
-// For testing only
-export interface SetBalancesSchema {
-    userAddress: string;
-    balances: TokenSchema[];
-}
-
 export interface TokenPairOrderbookSchema {
     bids: OffChainSignedOrderSchema[];
     asks: OffChainSignedOrderSchema[];

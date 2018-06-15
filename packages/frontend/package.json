@@ -15,6 +15,7 @@
     "async-validator": "^1.8.1",
     "axios": "^0.18.0",
     "bn.js": "^4.11.8",
+    "dotenv": "^6.0.0",
     "ethereum-blockies": "^0.1.1",
     "lodash": "4.17.5",
     "moment": "^2.22.1",
@@ -30,6 +31,7 @@
     "web3-provider-engine": "^13.8.0"
   },
   "scripts": {
+    "prod": "dotenv_config_path=.env.prod sudo serve build -l 80",
     "start": "PORT=5000 react-scripts-ts start",
     "build": "PORT=5001 react-scripts-ts build",
     "test": "react-scripts-ts test --env=jsdom",

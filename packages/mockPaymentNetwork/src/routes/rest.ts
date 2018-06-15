@@ -7,12 +7,12 @@ import { SerializerUtils } from '../utils/serialization';
 import { 
     OffChainSignedOrderSchema, 
     OffChainSignedOrder, 
-    SetBalancesSchema, 
     TokenBalances, 
     OffChainFillOrderRequestSchema, 
     OffChainSignedOrderStatus, 
     OffChainBatchFillOrderRequestSchema,
-    OrderFilledQuantities
+    OrderFilledQuantities,
+    TokenBalancesSchema
 } from '../types/schemas';
 import { ZeroEx } from '0x.js/lib/src/0x';
 import { WebSocketHandler } from './webSocket';
@@ -28,6 +28,24 @@ export class RestApiRoutes {
     constructor(private service: PaymentNetworkService) {
         this.router = Router();
         this.init();
+    }
+
+    /**
+     * GET response 
+     * For Testing and Benchmarking purposes only. Designed to gauge system throughput and latency
+     * @param {Request} req 
+     * @param {Response} res 
+     * @param {NextFunction} next 
+     * @memberof RestApiRoutes
+     */
+    public benchmarkServer(req: Request, res: Response, next: NextFunction) {
+        this.service
+            .getAllOrders()
+            .then((orders: OffChainSignedOrder[]) => {
+                res.statusMessage = 'Success';
+                res.status(201).send();
+            }
+        );
     }
 
     /**
@@ -53,8 +71,8 @@ export class RestApiRoutes {
      */
     public setTokenBalances(req: Request, res: Response, next: NextFunction) {
         const { body } = req;
-        const setBalancesSchema = body as SetBalancesSchema;
-        const tokenBalances = SerializerUtils.StringTokenBalancesToBigNumber(setBalancesSchema.balances);
+        const setBalancesSchema = body as TokenBalancesSchema;
+        const tokenBalances = SerializerUtils.StringTokenBalancesToBigNumber(setBalancesSchema.tokenBalances);
         this.service
             .setUserTokenBalances(setBalancesSchema.userAddress, tokenBalances)
             .then(v => {
@@ -144,6 +162,7 @@ export class RestApiRoutes {
      * endpoints.
      */
     private init() {
+        this.router.get('/benchmark', this.benchmarkServer.bind(this));
         this.router.get('/balances/:address', this.getTokenBalances.bind(this));
         this.router.post('/balances', this.setTokenBalances.bind(this));
         this.router.post('/exchange/order/status', this.getOrderStatus.bind(this));

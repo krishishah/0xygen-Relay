@@ -34,6 +34,20 @@ export class OffChainSignedOrderRepository extends Repository<PaymentChannelSign
         );
     }
 
+    public getAllOrders(): Promise<OffChainSignedOrder[]> {
+        return this.find()
+            .then(signedOrderEntities => {
+                if (!signedOrderEntities) {
+                    throw Error;
+                }
+                return signedOrderEntities.map(x => this.toSignedOrder(x));
+            })
+            .catch(error => {
+                throw error;
+            }
+        );
+    }
+
     public getEnrichedSignedOrder(orderHashHex: string): Promise<EnrichedSignedOrder> {
         return this.findOne({orderHashHex: orderHashHex})
             .then(signedOrderEntity => {
