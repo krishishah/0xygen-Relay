@@ -10,7 +10,7 @@ export const TEST_RPC = 'http://localhost:8545';
 export const ETHER_TOKEN_SYMBOL = 'ETH';
 export const ETHER_DECIMAL_PLACES = 18;
 
-export const RELAYER_HOST = process.env.RELAYER_HOST || 'http://localhost:3000';
+export const RELAYER_HOST = process.env.REACT_APP_RELAYER_HOST || 'http://localhost:3000';
 
 export const RELAYER_ZERO_EX_WS_URL = process.env.REACT_APP_RELAYER_ZERO_EX_WS_URL || 'ws://localhost:3001';
 export const RELAYER_OFF_CHAIN_WS_URL = process.env.REACT_APP_RELAYER_OFF_CHAIN_WS_URL || 'ws://localhost:3002';

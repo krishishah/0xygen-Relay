@@ -1,4 +1,4 @@
-import { OffChainOrder, OffChainSignedOrder, OffChainBatchFillOrder } from '../types/schemas';
+import { OffChainOrder, OffChainSignedOrder, OffChainBatchFillOrder, OffChainFillOrderRequest } from '../types/schemas';
 import * as ethABI from 'ethereumjs-abi';
 import * as ethUtil from 'ethereumjs-util';
 import { SolidityTypes } from '@0xproject/types';
@@ -84,6 +84,59 @@ export function getOffChainSignedOrderHashHex(order: OffChainSignedOrder): strin
     const hashBuff = ethABI.soliditySHA3(types, values);
     const hashHex = ethUtil.bufferToHex(hashBuff);
     return hashHex;
+}
+
+export function getOffChainFillOrderReqHashHex(batchFillOrderReq: OffChainFillOrderRequest): string {
+    const order: OffChainSignedOrder = batchFillOrderReq.signedOrder;
+
+    const parts = [
+        { value: order.maker, type: SolidityTypes.Address },
+        { value: order.taker, type: SolidityTypes.Address },
+        { value: order.makerTokenAddress, type: SolidityTypes.Address },
+        { value: order.takerTokenAddress, type: SolidityTypes.Address },
+        {
+            value: bigNumberToBN(order.makerTokenAmount),
+            type: SolidityTypes.Uint256,
+        },
+        {
+            value: bigNumberToBN(order.takerTokenAmount),
+            type: SolidityTypes.Uint256,
+        },
+        {
+            value: bigNumberToBN(order.expirationUnixTimestampSec),
+            type: SolidityTypes.Uint256,
+        },
+        { 
+            value: bigNumberToBN(order.salt), 
+            type: SolidityTypes.Uint256 
+        },
+        { 
+            value: order.ecSignature.v, 
+            type: SolidityTypes.Uint8 
+        },
+        { 
+            value: order.ecSignature.r, 
+            type: 'bytes32'
+        },
+        { 
+            value: order.ecSignature.s, 
+            type: 'bytes32'
+        },
+        {
+            value: batchFillOrderReq.takerAddress,
+            type: SolidityTypes.Address
+        },
+        {
+            value: bigNumberToBN(batchFillOrderReq.takerFillAmount),
+            type: SolidityTypes.Uint256
+        },
+    ];
+    const types = _.map(parts, o => o.type);
+    const values = _.map(parts, o => o.value);
+    const hashBuff = ethABI.soliditySHA3(types, values);
+    const hashHex = ethUtil.bufferToHex(hashBuff);
+    return hashHex;
+
 }
 
 export function getOffChainBatchFillOrderHashHex(batchFillOrderReq: OffChainBatchFillOrder): string {
